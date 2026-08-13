@@ -1,21 +1,37 @@
 import { useState } from 'react';
 import LandingIntro from './features/landing/LandingIntro';
+import PersonalInfo from './features/personalInfo/PersonalInfo';
 import CapturePhoto from './features/camera/CapturePhoto';
 import Questionnaire from './features/questionnaire/Questionnaire';
-import LoadingScreen from './features/recommendation/LoadingScreen'; // Path updated
+import LoadingScreen from './features/recommendation/LoadingScreen';
 
 function App() {
-  // 'landing' | 'camera' | 'questionnaire' | 'loading' | 'recommendation'
   const [step, setStep] = useState('landing');
+  const [personalInfo, setPersonalInfo] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [answers, setAnswers] = useState(null);
 
   return (
     <>
+      {/* 1. Landing Page */}
       {step === 'landing' && (
-        <LandingIntro onStartAssessment={() => setStep('camera')} />
+        <LandingIntro onStartAssessment={() => setStep('personal-info')} />
       )}
 
+      {/* 2. Personal Info Form */}
+      {step === 'personal-info' && (
+        <PersonalInfo
+          initialData={personalInfo}
+          onPrevious={() => setStep('landing')}
+          // CHANGES HERE: 'onNext' ko 'onSaved' kar diya hai taaki component ke prop se match ho sake
+          onSaved={(data) => {
+            setPersonalInfo(data); // User ka data save ho gaya
+            setStep('camera');     // User ab camera section mein chala jayega
+          }}
+        />
+      )}
+
+      {/* 3. Camera / Photo Capture */}
       {step === 'camera' && (
         <CapturePhoto
           onSubmit={(imageDataUrl) => {
@@ -25,10 +41,12 @@ function App() {
         />
       )}
 
+      {/* 4. Questionnaire */}
       {step === 'questionnaire' && (
         <Questionnaire
           onComplete={(collectedAnswers) => {
             setAnswers(collectedAnswers);
+            console.log('Personal Info:', personalInfo);
             console.log('Photo captured:', photo);
             console.log('Questionnaire answers:', collectedAnswers);
             setStep('loading');
@@ -36,7 +54,7 @@ function App() {
         />
       )}
 
-      {/* Loading Screen */}
+      {/* 5. Loading Screen */}
       {step === 'loading' && <LoadingScreen />}
     </>
   );
