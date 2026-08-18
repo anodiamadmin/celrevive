@@ -13,6 +13,11 @@ ret_obj = get_info_from_ai(model_name, model_API_key, …, image_url, prompt_str
 
 
 
+questionnaire_skin_concerns OR  image_skinconcerns 
+                         SC 00..
+                                     Sc10
+	SC20
+
 
 
 
