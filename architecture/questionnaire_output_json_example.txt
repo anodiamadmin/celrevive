@@ -1,0 +1,18 @@
+image_skin_concerns: {
+	skin_concern_id: SC0001, skin_concern_name: "Dry Skin", exists: {bool},
+	...
+	skin_concern_id: SC0019, skin_concern_name: "Skin Ageing / Longevity Risk", exists: {bool},
+	skin_concern_id: SC1001, skin_concern_name: "Enlarged Pores" , exists: {bool},
+	...
+	skin_concern_id: SC1009, skin_concern_name: "Scar/Repair Needs" , exists: {bool},
+}
+	
+prompt = “given the image in the <image_url > get me the <skin_concerns.certainity_pc> populated …”
+ret_obj = get_info_from_ai(model_name, model_API_key, …, image_url, prompt_string)
+
+
+
+
+
+
+
