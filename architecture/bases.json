@@ -1,0 +1,34 @@
+{
+  "bases": [
+    {
+      "base_id": "1",
+      "base_name": "Light Lotion",
+      "base_selected": false,
+      "if_base_selected_why": ""
+    },
+    {
+      "base_id": "2",
+      "base_name": "Moisturiser",
+      "base_selected": false,
+      "if_base_selected_why": ""
+    },
+    {
+      "base_id": "3",
+      "base_name": "Cream",
+      "base_selected": false,
+      "if_base_selected_why": ""
+    },
+    {
+      "base_id": "4",
+      "base_name": "Serum",
+      "base_selected": false,
+      "if_base_selected_why": ""
+    },
+    {
+      "base_id": "5",
+      "base_name": "Oil",
+      "base_selected": false,
+      "if_base_selected_why": ""
+    }
+  ]
+}

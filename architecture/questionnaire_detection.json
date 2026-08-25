@@ -1,0 +1,142 @@
+{
+  "questionnaire_skin_concerns": [
+    {
+      "skin_concern_id": "SC0001",
+      "skin_concern_name": "Dry Skin",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0002",
+      "skin_concern_name": "Dehydrated Skin",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0003",
+      "skin_concern_name": "Compromised Skin Barrier",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0004",
+      "skin_concern_name": "Sensitive Skin",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0005",
+      "skin_concern_name": "Redness",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0006",
+      "skin_concern_name": "Rosacea",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0007",
+      "skin_concern_name": "Reactive Skin",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0008",
+      "skin_concern_name": "Acne",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0009",
+      "skin_concern_name": "Breakouts / Blemishes",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0010",
+      "skin_concern_name": "Excess Sebum (Oily Skin)",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0011",
+      "skin_concern_name": "Mature Skin",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0012",
+      "skin_concern_name": "Uneven Skin Tone",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0013",
+      "skin_concern_name": "Hyperpigmentation",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0014",
+      "skin_concern_name": "Melasma-like Pigmentation",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0015",
+      "skin_concern_name": "Dullness / Poor Radiance",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0016",
+      "skin_concern_name": "Fatigued Skin",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0017",
+      "skin_concern_name": "Photoaging",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0018",
+      "skin_concern_name": "Chronic Skin Inflammation Risk",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC0019",
+      "skin_concern_name": "Skin Ageing / Longevity Risk",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC2001",
+      "skin_concern_name": "Itching / Irritation",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC2002",
+      "skin_concern_name": "Environmental Skin Stress",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC2003",
+      "skin_concern_name": "Blue Light Exposure Risk",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+    {
+      "skin_concern_id": "SC2004",
+      "skin_concern_name": "Microbiome Imbalance Risk",
+      "skin_concern_exists": false,
+      "if_skin_concern_true_why": ""
+    },
+  ]
+}

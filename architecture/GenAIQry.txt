@@ -1,0 +1,55 @@
+Architecture diagram for the MVP project for CelRevive is Attached. It is explained below:
+
+CelRevive already has a Shopify website with the following features: user can log in, purchase (no product recommendation/ automatic skin concern detection exists) and check out the product (or add to shopping cart).
+
+We are building a widget to implement the additional features of:
+- automatic skin concern detection (from a specified set of concerns)(through image analysis and questionnaire)
+- product recommendation (based on Effiderma's proprietary cosmetologist and research info) comprising of:
+  - base ingredients (bases): matching a person's age, skin type (oily, dry, etc), location based weather consideration, acne suitability and other answers to the questionnaire
+  - active ingredients (actives): that are compatible to the above bases and effective for the above detected skin concerns
+  - we also need explanations for each decisions taken by AI or the app.
+
+In the Architecture diagram attached, the logged-in user will access the widget for product recommendation and automatic skin concern detection.
+They will take an image of their skin concern.
+Step 1: Calculate Visual Skin Concerns + AI Explanations this image will be sent to a visual detection AI and the json object in the attached image_detection.json file's json is expected to be filled up by the response of the visual detection AI with the detected skin_concern as "skin_concern_exists": false, "if_skin_concern_true_why": "why AI thinks that the skin concern exists?"
+
+Step 2 A: Collect questionnaire answers in json format: user will be asked to reply to the questionnaire and the response will be collected in the attached "questionnire_user_answer.json".
+
+Step 2 B: Calculate Questionnaire Skin Concerns + AI Explanations: this questionnire_user_answer.json will be sent to a LLM AI and the json object in the attached questionnaire_detection.json file's json is expected to be filled up by the response of the LLM with the detected skin_concern as "skin_concern_exists": false, "if_skin_concern_true_why": "why AI thinks that the skin concern exists?"
+
+Step 3: Calculate Combined Skin Concerns + AI Explanations: Next we will combine the image_skin_concerns and questionnaire_skin_concerns into one json skin_concerns in attached skin_concerns.json.
+Skin concerns SC1001 to SC1009 are detected by visual detection AI from the image of the skin concern only. Skin concerns SC2001 to SC2002 are detected by LLM from the questionnaire answers only.
+Skin concerns SC0001 to SC0019 are detected by both visual detection AI from the image of the skin concern and by LLM from the questionnaire answers.
+while combining, for each skin_concern.skin_concern_id (from SC0001 to SC0019), we will calculate the skin_concern.skin_concern_exists = image_skin_concern.skin_concern_exists OR questionnaire_skin_concern.skin_concern_exists;
+we will calculate the skin_concern.if_skin_concern_true_why = string_concatenate(image_skin_concern.if_skin_concern_true_why, " ", questionnaire_skin_concern.if_skin_concern_true_why)
+
+Step 4: query a LLM with the above Combined Skin Concerns + AI Explanations in the attached skin_concern.json. We will provide the following tables from the given DDL and DML scripts for Retrieval Augmented Generation as Vector Databases: 
+************
+from the above LLM + RAG query we expect to get
+1. the List of bases (for the user as per age, location specific weather patterns, skin type etc. ) + AI Explanations
+Actives + AI Explanations
+compatible to bases
+effective for skin concerns
+the following jsons to be populated.
+*************
+
+Also attached are the existing CelRevive_DDL.sql and CelRevive_DML_Primary_Insert.sql files. These files contain the initial table creation scripts and initial header data insertion scripts for the CelRevive project to impart Effiderma's proprietary cosmetologist and research info as part of a RAG/ vector database for the LLM behind the agentic AI design.
+
+Give me one by one, the updated ER Diagram, CelRevive_DDL.sql and CelRevive_DML_Primary_Insert.sql files so that we can have the changed table definitions and initial header data to incorporate the above architecture to implement the user access and transaction (user stories/ workflows) given yin the above diagram and it's explanations.
+
+Do not reply immediately to this query. Just jeep it in your attention. Plus all the attachments:
+**************
+1.
+2.
+3.
+4.
+
+I shall ask further queries based on this.
+
+The ER diagram is also attached as celrevive_er_diagram.png
+
+First give me the updated ER Diagram file: celrevive_er_diagram.png
+
+Next give me the updated DDL file: CelRevive_DDL.sql file
+
+Finally give me the updated DML file: CelRevive_DML_Primary_Insert.sql file

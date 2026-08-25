@@ -1,0 +1,94 @@
+{
+  "actives": [
+    {
+      "active_id": "1",
+      "active_name": "Ectoin® natural",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "2",
+      "active_name": "Skinmimics® PRO MB",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "3",
+      "active_name": "Dermabiotics HDB1196 GN",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "4",
+      "active_name": "Defensil® Plus",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "5",
+      "active_name": "AmelioSense™",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "6",
+      "active_name": "Agefinity™",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "7",
+      "active_name": "ETERWELL™ YOUTH",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "8",
+      "active_name": "SYN®-COLL CB",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "9",
+      "active_name": "ILUMYS®",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "10",
+      "active_name": "ENDOTHELYOL®",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "11",
+      "active_name": "Sytenol® A",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "12",
+      "active_name": "NovoRetin™",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "13",
+      "active_name": "TRI-SOLVE®",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "14",
+      "active_name": "Glycoin® natural",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    },
+    {
+      "active_id": "15",
+      "active_name": "Vetivyne™",
+      "active_selected": false,
+      "if_active_selected_why": ""
+    }
+  ]
+}

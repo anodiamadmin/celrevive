@@ -1,0 +1,355 @@
+{
+  "questionnaire": {
+    "title": "AI Questionnaire",
+    "sections": [
+      {
+        "section_id": "sec_1",
+        "section_title": "Section 1 — Skin Type & Core Concerns",
+        "questions": [
+          {
+            "question_id": "q1",
+            "question_number": 1,
+            "question_text": "How would you characterise your skin?",
+            "question_type": "single_select",
+            "options": [
+              "Normal",
+              "Dry",
+              "Oily",
+              "Combination/Oily",
+              "Sensitive",
+              "Mature/Ageing",
+              "Unsure"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q2",
+            "question_number": 2,
+            "question_text": "Which skin concerns are you currently experiencing? (Select up to 3)",
+            "question_type": "multi_select",
+            "max_selections": 3,
+            "options": [
+              "Dryness or dehydration",
+              "Redness or irritation",
+              "Acne or breakouts",
+              "Enlarged pores",
+              "Fine lines or wrinkles",
+              "Uneven skin tone or pigmentation",
+              "Dullness",
+              "Itching or flaking",
+              "Oiliness",
+              "Skin sensitivity/reactivity",
+              "Rosacea",
+              "Eczema-prone skin",
+              "Psoriasis-prone skin",
+              "None of the above"
+            ],
+            "user_response": []
+          },
+          {
+            "question_id": "q3",
+            "question_number": 3,
+            "question_text": "Would you describe your skin as sensitive?",
+            "question_type": "single_select",
+            "options": [
+              "Yes — highly sensitive/reactive",
+              "Yes — mildly sensitive",
+              "No",
+              "Unsure"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q4",
+            "question_number": 4,
+            "question_text": "How often does your skin feel tight, dry, itchy, or uncomfortable?",
+            "question_type": "single_select",
+            "options": [
+              "Daily",
+              "A few times a week",
+              "Occasionally",
+              "Rarely",
+              "Never"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q5",
+            "question_number": 5,
+            "question_text": "How often do you experience breakouts or clogged pores?",
+            "question_type": "single_select",
+            "options": [
+              "Frequently",
+              "Occasionally",
+              "Rarely",
+              "Never"
+            ],
+            "user_response": null
+          }
+        ]
+      },
+      {
+        "section_id": "sec_2",
+        "section_title": "Section 2 — Medical & Allergy Screening",
+        "questions": [
+          {
+            "question_id": "q6",
+            "question_number": 6,
+            "question_text": "Have you ever been diagnosed with a skin condition?",
+            "question_type": "multi_select",
+            "options": [
+              "Acne",
+              "Rosacea",
+              "Eczema/Dermatitis",
+              "Psoriasis",
+              "Seborrheic dermatitis",
+              "Melasma/Pigmentation disorder",
+              "None",
+              "Prefer not to say"
+            ],
+            "user_response": []
+          },
+          {
+            "question_id": "q7",
+            "question_number": 7,
+            "question_text": "Do you have any allergies or ingredient sensitivities we should know about?",
+            "question_type": "single_select_with_conditional_text",
+            "options": [
+              "Yes",
+              "No",
+              "Unsure"
+            ],
+            "conditional_field": {
+              "trigger_value": "Yes",
+              "field_label": "Please provide details",
+              "user_text_response": null
+            },
+            "user_response": null
+          },
+          {
+            "question_id": "q8",
+            "question_number": 8,
+            "question_text": "Are you currently using prescription skin treatments or medications that may affect your skin?",
+            "question_type": "multi_select",
+            "options": [
+              "Acne medication",
+              "Steroid creams",
+              "Hormonal medication",
+              "Cancer treatment",
+              "Immunosuppressive medication",
+              "No",
+              "Prefer not to say"
+            ],
+            "user_response": []
+          },
+          {
+            "question_id": "q9",
+            "question_number": 9,
+            "question_text": "Have you recently undergone any cosmetic or professional skin treatments?",
+            "question_type": "multi_select",
+            "options": [
+              "Chemical peels",
+              "Laser treatments",
+              "Microneedling",
+              "Injectable treatments",
+              "Facial treatments",
+              "No recent treatments"
+            ],
+            "user_response": []
+          }
+        ]
+      },
+      {
+        "section_id": "sec_3",
+        "section_title": "Section 3 — Current Skincare Routine",
+        "questions": [
+          {
+            "question_id": "q10",
+            "question_number": 10,
+            "question_text": "Do you use exfoliating products (such as scrubs, acids, or retinol)?",
+            "question_type": "single_select",
+            "options": [
+              "Daily",
+              "A few times a week",
+              "Occasionally",
+              "Never"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q11",
+            "question_number": 11,
+            "question_text": "Which skincare products do you currently use regularly? (Select all that apply)",
+            "question_type": "multi_select",
+            "options": [
+              "Cleanser",
+              "Moisturizer",
+              "Serum",
+              "Retinol/Vitamin A",
+              "Vitamin C",
+              "Exfoliating acids",
+              "Face oils",
+              "SPF/sunscreen",
+              "Prescription skincare",
+              "I use very few skincare products"
+            ],
+            "user_response": []
+          },
+          {
+            "question_id": "q12",
+            "question_number": 12,
+            "question_text": "How would you describe your skincare routine?",
+            "question_type": "single_select",
+            "options": [
+              "Minimal/simple",
+              "Moderate",
+              "Advanced/multi-step",
+              "Changes frequently",
+              "I’m new to skincare"
+            ],
+            "user_response": null
+          }
+        ]
+      },
+      {
+        "section_id": "sec_4",
+        "section_title": "Section 4 — Lifestyle & Environment",
+        "questions": [
+          {
+            "question_id": "q13",
+            "question_number": 13,
+            "question_text": "On average, how many hours of sleep do you get per night?",
+            "question_type": "single_select",
+            "options": [
+              "More than 8 hours",
+              "Around 7–8 hours",
+              "Around 6–7 hours",
+              "Slightly under 6 hours",
+              "Much less than 6 hours"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q14",
+            "question_number": 14,
+            "question_text": "How would you describe your stress levels?",
+            "question_type": "single_select",
+            "options": [
+              "Low",
+              "Moderate",
+              "High",
+              "Extremely high",
+              "Varies significantly"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q15",
+            "question_number": 15,
+            "question_text": "How would you best describe the climate you live in or are currently travelling to?",
+            "question_type": "single_select",
+            "options": [
+              "Cool & dry",
+              "Warm & dry",
+              "Moderate",
+              "Tropical/humid",
+              "Seasonal/extreme changes"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q16",
+            "question_number": 16,
+            "question_text": "Which environment are you exposed to most often?",
+            "question_type": "single_select",
+            "options": [
+              "Air-conditioned indoor environment",
+              "Outdoor sun exposure",
+              "Urban/city pollution",
+              "Dry heating environments",
+              "Coastal/humid environment",
+              "Mixed environments"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q17",
+            "question_number": 17,
+            "question_text": "How much water do you typically drink each day?",
+            "question_type": "single_select",
+            "options": [
+              "More than 2 litres",
+              "Around 1–2 litres",
+              "Less than 1 litre",
+              "I’m not sure"
+            ],
+            "user_response": null
+          }
+        ]
+      },
+      {
+        "section_id": "sec_5",
+        "section_title": "Section 5 — Product Preferences & Personalisation",
+        "questions": [
+          {
+            "question_id": "q18",
+            "question_number": 18,
+            "question_text": "What type of skincare texture do you prefer?",
+            "question_type": "single_select",
+            "options": [
+              "Lightweight gel",
+              "Serum",
+              "Light Lotion",
+              "Moisturiser",
+              "Cream",
+              "Rich balm",
+              "Face oil",
+              "No preference"
+            ],
+            "user_response": null
+          },
+          {
+            "question_id": "q19",
+            "question_number": 19,
+            "question_text": "Which product qualities are most important to you? (Select up to 3)",
+            "question_type": "multi_select",
+            "max_selections": 3,
+            "options": [
+              "Fragrance-free",
+              "Fast absorbing",
+              "Lightweight feel",
+              "Deep hydration",
+              "Barrier repair",
+              "Anti-ageing support",
+              "Acne-friendly",
+              "Natural ingredients",
+              "Microbiome-friendly",
+              "Clinically proven",
+              "Non-greasy finish",
+              "Sensitive skin suitable"
+            ],
+            "user_response": []
+          },
+          {
+            "question_id": "q20",
+            "question_number": 20,
+            "question_text": "What is your primary skincare goal over the next 3 months?",
+            "question_type": "single_select",
+            "options": [
+              "Reduce redness/sensitivity",
+              "Improve hydration",
+              "Strengthen skin barrier",
+              "Reduce breakouts",
+              "Improve texture/smoothness",
+              "Brighten skin tone",
+              "Reduce signs of ageing",
+              "Maintain healthy skin",
+              "Recover from treatments or irritation"
+            ],
+            "user_response": null
+          }
+        ]
+      }
+    ]
+  }
+}
