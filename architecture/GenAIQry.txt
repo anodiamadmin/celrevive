@@ -24,25 +24,35 @@ while combining, for each skin_concern.skin_concern_id (from SC0001 to SC0019), 
 we will calculate the skin_concern.if_skin_concern_true_why = string_concatenate(image_skin_concern.if_skin_concern_true_why, " ", questionnaire_skin_concern.if_skin_concern_true_why)
 
 Step 4: query a LLM with the above Combined Skin Concerns + AI Explanations in the attached skin_concern.json. We will provide the following tables from the given DDL and DML scripts for Retrieval Augmented Generation as Vector Databases: 
-************
+concern_benefit + active_benefit _score+base_active_compatability
+these tables will give the candidate ingredients (if not recommend which tables)
 from the above LLM + RAG query we expect to get
 1. the List of bases (for the user as per age, location specific weather patterns, skin type etc. ) + AI Explanations
 Actives + AI Explanations
 compatible to bases
 effective for skin concerns
 the following jsons to be populated.
-*************
+bases.json
+actives.json
+
+Step 5: the output bases.json and actives.json should be formatted along with combined skin concerns and respective explanation for the skin concerns, actives and bases before returning it to the frontend shopify widget.
 
 Also attached are the existing CelRevive_DDL.sql and CelRevive_DML_Primary_Insert.sql files. These files contain the initial table creation scripts and initial header data insertion scripts for the CelRevive project to impart Effiderma's proprietary cosmetologist and research info as part of a RAG/ vector database for the LLM behind the agentic AI design.
 
 Give me one by one, the updated ER Diagram, CelRevive_DDL.sql and CelRevive_DML_Primary_Insert.sql files so that we can have the changed table definitions and initial header data to incorporate the above architecture to implement the user access and transaction (user stories/ workflows) given yin the above diagram and it's explanations.
 
 Do not reply immediately to this query. Just jeep it in your attention. Plus all the attachments:
-**************
-1.
-2.
-3.
-4.
+
+1.actives.json
+2.bases.json
+3.CelRevive_DDL.sql
+4.CelRevive_DML_Primary_Insert.sql
+5.celrevive_er_diagram.png
+6.image_detection.json
+7.questionnaire_detection.json
+8.questionnaire_user_answer.json	
+9.skin_concern.json
+10.architecture diagram
 
 I shall ask further queries based on this.
 
