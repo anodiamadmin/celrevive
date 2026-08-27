@@ -1,0 +1,38 @@
+# ==========================================
+# 1. Environment Variables & Secrets (CRITICAL)
+# ==========================================
+.env
+.env.*
+*.local
+secrets.json
+
+# ==========================================
+# 2. Python & FastAPI Backend
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual Environments
+venv/
+.venv/
+Pipfile.lock
+poetry.lock
+
+# ==========================================
+# 3. PyCharm & IDE Configs
+# ==========================================
+.idea/
+*.swp
+*.swo
+
+# ==========================================
+# 4. OS Configs
+# ==========================================
+.DS_Store
+Thumbs.db
