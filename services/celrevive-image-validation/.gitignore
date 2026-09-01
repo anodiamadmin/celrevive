@@ -1,0 +1,41 @@
+# --- Environments ---
+.env
+.env1/
+.venv/
+venv/
+env/
+ENV/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Testing / coverage ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# --- IDE / editor ---
+.vscode/
+.idea/
+*.swp
+
+# --- OS cruft ---
+.DS_Store
+Thumbs.db
+
+# --- Logs / local artifacts ---
+*.log
+*.db
+*.sqlite3
