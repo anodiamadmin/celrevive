@@ -5,11 +5,14 @@ Pure functions, independently unit-testable (feeds into 1.4), composed by
 `run_full_validation` into a single pass/fail result with reasons + metrics.
 """
 
+import io
 import logging
 from typing import Optional
 
 import cv2
 import numpy as np
+import pillow_heif
+from PIL import Image
 
 from app.core.config import Settings, get_settings
 from app.schemas.image_validation import (
@@ -19,6 +22,10 @@ from app.schemas.image_validation import (
 )
 
 logger = logging.getLogger("celrevive.image_validation")
+
+# Registers HEIF/HEIC opener support into Pillow. Needed because iPhone
+# camera photos default to HEIC, which OpenCV cannot decode natively.
+pillow_heif.register_heif_opener()
 
 
 # --------------------------------------------------------------------------
@@ -42,6 +49,11 @@ def validate_file_size(size_bytes: int, settings: Settings) -> bool:
 def decode_image(file_bytes: bytes) -> Optional[np.ndarray]:
     """Attempts to decode raw bytes into a BGR image array.
 
+    Tries OpenCV first (fast path for JPEG/PNG/WebP). Falls back to Pillow
+    for anything OpenCV can't handle — in practice this is what catches
+    HEIC/HEIF (iPhone's default camera format), since pillow_heif registers
+    HEIF support into Pillow's plugin system at import time above.
+
     Returns None if the bytes are corrupt, truncated, or not a real image —
     this is what actually proves the file is readable, regardless of what
     its extension/content-type claimed.
@@ -49,9 +61,19 @@ def decode_image(file_bytes: bytes) -> Optional[np.ndarray]:
     try:
         np_buffer = np.frombuffer(file_bytes, dtype=np.uint8)
         image = cv2.imdecode(np_buffer, cv2.IMREAD_COLOR)
-        return image  # None if decode failed
+        if image is not None:
+            return image
     except Exception:
-        logger.exception("Unexpected error while decoding image bytes")
+        logger.exception("Unexpected error during OpenCV decode")
+
+    # OpenCV couldn't handle it (e.g. HEIC) — try Pillow as a fallback.
+    try:
+        pil_image = Image.open(io.BytesIO(file_bytes))
+        pil_image = pil_image.convert("RGB")
+        rgb_array = np.array(pil_image)
+        return cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
+    except Exception:
+        logger.exception("Pillow fallback decode also failed — not a readable image")
         return None
 
 

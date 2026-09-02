@@ -1,0 +1,8 @@
+Added application/octet-stream to allow all file types for now, change in future 
+setup:
+create env
+make sure env is in .gitignore
+install requirements
+cp .env.example .env
+uvicorn app.main:app --reload
+
