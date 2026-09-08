@@ -94,3 +94,6 @@ Desktop.ini
 test-results/
 coverage.xml
 junit.xml
+
+# Dedicated folder for AI prompt files
+.ai_prompts/

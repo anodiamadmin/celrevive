@@ -36,3 +36,6 @@ poetry.lock
 # ==========================================
 .DS_Store
 Thumbs.db
+
+# Dedicated folder for AI prompt files
+.ai_prompts/
