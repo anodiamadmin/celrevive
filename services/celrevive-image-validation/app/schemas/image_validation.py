@@ -2,6 +2,7 @@
 
 from enum import Enum
 from typing import List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -40,3 +41,5 @@ class ImageValidationResponse(BaseModel):
     message: str
     # Kept out of the default frontend message but included for debugging/logging on the client if needed
     reasons: List[RejectionReason] = Field(default_factory=list)
+    session_id: Optional[UUID] = None
+    image_id: Optional[UUID] = None

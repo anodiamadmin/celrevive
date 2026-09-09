@@ -28,7 +28,11 @@
 // const DEFAULT_CROP_BOX = { x: 10, y: 10, w: 80, h: 80 };
 // const MIN_CROP_SIZE_PERCENT = 15;
 
-// export default function CapturePhoto({ onSubmit }) {
+// const IMAGE_VALIDATION_API_URL =
+//   import.meta.env.VITE_IMAGE_VALIDATION_API_URL ||
+//   'http://localhost:8000/api/v1/image-validation';
+
+// export default function CapturePhoto({ onSubmit, sessionId }) {
 //   const [stage, setStage] = useState('idle');
 //   const [capturedImage, setCapturedImage] = useState(null);
 //   const [cameraError, setCameraError] = useState('');
@@ -587,6 +591,10 @@ import {
 import scanDevicePhoto from '../../assets/scan-device.png';
 import selfieCapturePhoto from '../../assets/selfie-capture.png';
 
+const IMAGE_VALIDATION_API_URL =
+  import.meta.env.VITE_IMAGE_VALIDATION_API_URL ||
+  'http://localhost:8000/api/v1/image-validation';
+
 const TRUST_ITEMS = [
   { icon: ShieldKeyhole, label: 'Private & secure' },
   { icon: MonitorSmartphone, label: 'On-hand tool' },
@@ -597,7 +605,7 @@ const TRUST_ITEMS = [
 const DEFAULT_CROP_BOX = { x: 10, y: 10, w: 80, h: 80 };
 const MIN_CROP_SIZE_PERCENT = 15;
 
-export default function CapturePhoto({ onSubmit }) {
+export default function CapturePhoto({ onSubmit, sessionId }) {
   const [stage, setStage] = useState('idle');
   const [capturedImage, setCapturedImage] = useState(null);
   const [cameraError, setCameraError] = useState('');
@@ -633,12 +641,6 @@ export default function CapturePhoto({ onSubmit }) {
   }, []);
 
   useEffect(() => stopCamera, [stopCamera]);
-
-  useEffect(() => {
-    if (stage === 'crop') {
-      setCropBox(DEFAULT_CROP_BOX);
-    }
-  }, [stage]);
 
   const openCamera = async (targetFacingMode = facingMode) => {
     setCameraError('');
@@ -710,6 +712,7 @@ export default function CapturePhoto({ onSubmit }) {
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     setCapturedImage(dataUrl);
+    setCropBox(DEFAULT_CROP_BOX);
     stopCamera();
     setStage('crop');
   };
@@ -725,6 +728,7 @@ export default function CapturePhoto({ onSubmit }) {
     const reader = new FileReader();
     reader.onload = () => {
       setCapturedImage(reader.result);
+      setCropBox(DEFAULT_CROP_BOX);
       setStage('crop');
     };
     reader.readAsDataURL(file);
@@ -742,6 +746,7 @@ export default function CapturePhoto({ onSubmit }) {
     const reader = new FileReader();
     reader.onload = () => {
       setCapturedImage(reader.result);
+      setCropBox(DEFAULT_CROP_BOX);
       setStage('crop');
     };
     reader.readAsDataURL(file);
@@ -901,35 +906,44 @@ export default function CapturePhoto({ onSubmit }) {
     setValidationError('');
 
     try {
-      /*
-       * BACKEND API ENDPOINT WILL BE ADDED HERE
-       *
-       * Example:
-       *
-       * const response = await fetch('BACKEND_ENDPOINT_HERE', {
-       *   method: 'POST',
-       *   headers: {
-       *     'Content-Type': 'application/json',
-       *   },
-       *   body: JSON.stringify({
-       *     image: imageData,
-       *   }),
-       * });
-       *
-       * const data = await response.json();
-       *
-       * return data.isValid;
-       */
+      const response = await fetch(imageData);
+      const blob = await response.blob();
+      const formData = new FormData();
+      formData.append('image', blob, 'skin-capture.jpg');
+      if (sessionId) {
+        formData.append('session_id', sessionId);
+      }
 
-      // TEMPORARY MOCK RESULT
-      // Backend banne tak isko true/false karke testing kar sakte ho. ////
-      const isValid = true;
+      const validationResponse = await fetch(IMAGE_VALIDATION_API_URL, {
+        method: 'POST',
+        body: formData,
+      });
 
-      return isValid;
+      let data = {};
+      try {
+        data = await validationResponse.json();
+      } catch {
+        data = {};
+      }
 
+      if (!validationResponse.ok) {
+        throw new Error(data.detail || 'Image validation service is unavailable.');
+      }
+
+      if (!data.valid) {
+        setValidationError(data.message || 'Your image is not valid. Take another image with better quality.');
+        setCapturedImage(null);
+        setStage('idle');
+        return null;
+      }
+
+      return data;
     } catch (error) {
       console.error('Image validation failed:', error);
-      return false;
+      setValidationError(
+        error.message || 'Image validation failed. Please try again.'
+      );
+      return null;
     } finally {
       setIsValidating(false);
     }
@@ -942,23 +956,12 @@ export default function CapturePhoto({ onSubmit }) {
   const submitPhoto = async () => {
     if (!capturedImage || isValidating) return;
 
-    const isValid = await validateImage(capturedImage);
+    const result = await validateImage(capturedImage);
 
-    if (isValid === true) {
-      // IMAGE VALID:
-      // Send image to Parent component.
-      // Taking to questionnaire.
-      onSubmit?.(capturedImage);
-    } else {
-      // IMAGE INVALID:
-      // Show Error message 
-      setValidationError(
-        'Your image is not valid. Take another image with better quality'
-      );
-
-      // Back to the take a photo page
-      setCapturedImage(null);
-      setStage('idle');
+    if (result) {
+      // IMAGE VALID + PERSISTED:
+      // Parent receives the persisted session/image identifiers.
+      onSubmit?.({ imageDataUrl: capturedImage, ...result });
     }
   };
 

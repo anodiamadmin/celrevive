@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     LOW_LIGHT_THRESHOLD: float = 40.0
     OVEREXPOSED_THRESHOLD: float = 235.0
 
+    # --- Persistence ---
+    DATABASE_URL: str = ""
+    IMAGE_STORAGE_DIR: str = "./data/skin-images"
+    CORS_ORIGINS_RAW: str = "http://localhost:5173"
+    VISUAL_AI_URL: str = ""
+    VISUAL_AI_TIMEOUT_SECONDS: float = 30.0
+
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        return [item.strip() for item in self.CORS_ORIGINS_RAW.split(",") if item.strip()]
+
     @property
     def max_file_size_bytes(self) -> int:
         return int(self.MAX_FILE_SIZE_MB * 1024 * 1024)

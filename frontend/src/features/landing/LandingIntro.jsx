@@ -83,7 +83,6 @@
 
 
 
-import React from 'react';
 import heroImg from '../../assets/skin-analysis.png';
 
 export default function LandingIntro({ onStartAssessment }) {

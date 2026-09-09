@@ -43,6 +43,45 @@ def test_valid_image_is_accepted(
     assert data["valid"] is True
     assert data["reasons"] == []
     assert data["message"] == "Image passed all quality checks."
+    assert data["session_id"] is not None
+    assert data["image_id"] is not None
+
+
+def test_existing_session_id_is_forwarded_to_persistence(
+    client,
+    sharp_image,
+    image_to_bytes,
+    monkeypatch,
+):
+    from uuid import uuid4
+
+    session_id = uuid4()
+    captured = {}
+
+    from app.api.v1.routes import image_validation as image_validation_route
+
+    def fake_persist(**kwargs):
+        from app.services.image_persistence import PersistedImage
+
+        captured.update(kwargs)
+        return PersistedImage(
+            session_id=session_id,
+            image_id=uuid4(),
+            storage_uri="file:///test/skin-image.jpg",
+            sha256="0" * 64,
+        )
+
+    monkeypatch.setattr(image_validation_route, "persist_accepted_image", fake_persist)
+
+    response = client.post(
+        "/api/v1/image-validation",
+        data={"session_id": str(session_id)},
+        files={"image": ("valid.jpg", image_to_bytes(sharp_image), "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    assert captured["session_id"] == session_id
+    assert response.json()["session_id"] == str(session_id)
 
 
 def test_invalid_file_type_is_rejected(
@@ -246,6 +285,73 @@ def test_overexposed_image_is_rejected(
 
     assert data["valid"] is False
     assert "overexposed" in data["reasons"]
+
+
+def test_invalid_image_does_not_persist_or_schedule_visual_ai(
+    client,
+    blurry_image,
+    image_to_bytes,
+    monkeypatch,
+):
+    from app.api.v1.routes import image_validation as image_validation_route
+
+    persisted = False
+    scheduled = False
+
+    def fail_if_persisted(**_kwargs):
+        nonlocal persisted
+        persisted = True
+        raise AssertionError("invalid image must not be persisted")
+
+    def fail_if_scheduled(**_kwargs):
+        nonlocal scheduled
+        scheduled = True
+        raise AssertionError("invalid image must not schedule Visual AI")
+
+    monkeypatch.setattr(image_validation_route, "persist_accepted_image", fail_if_persisted)
+    monkeypatch.setattr(image_validation_route, "trigger_visual_ai_analysis", fail_if_scheduled)
+
+    response = client.post(
+        "/api/v1/image-validation",
+        files={"image": ("blurry.jpg", image_to_bytes(blurry_image), "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["valid"] is False
+    assert "blurry" in response.json()["reasons"]
+    assert persisted is False
+    assert scheduled is False
+
+
+def test_valid_image_schedules_visual_ai_after_persistence(
+    client,
+    sharp_image,
+    image_to_bytes,
+    monkeypatch,
+):
+    from app.api.v1.routes import image_validation as image_validation_route
+
+    captured = {}
+
+    def fake_trigger(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(
+        image_validation_route,
+        "trigger_visual_ai_analysis",
+        fake_trigger,
+    )
+
+    response = client.post(
+        "/api/v1/image-validation",
+        files={"image": ("valid.jpg", image_to_bytes(sharp_image), "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    assert captured["session_id"]
+    assert captured["image_id"]
+    assert captured["storage_uri"] == "file:///test/skin-image.jpg"
+    assert captured["mime_type"] == "image/jpeg"
 
 
 def test_response_contains_expected_fields(

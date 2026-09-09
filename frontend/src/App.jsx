@@ -9,8 +9,7 @@
 //   const [step, setStep] = useState('landing');
 //   const [personalInfo, setPersonalInfo] = useState(null);
 //   const [photo, setPhoto] = useState(null);
-//   const [answers, setAnswers] = useState(null);
-
+// 
 //   return (
 //     <>
 //       {/* 1. Landing Page */}
@@ -77,7 +76,7 @@ function App() {
   const [step, setStep] = useState('landing');
   const [personalInfo, setPersonalInfo] = useState(null);
   const [photo, setPhoto] = useState(null);
-  const [answers, setAnswers] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
 
   return (
     <>
@@ -102,8 +101,10 @@ function App() {
       {/* 3. Camera / Photo Capture */}
       {step === 'camera' && (
         <CapturePhoto
-          onSubmit={(imageDataUrl) => {
-            setPhoto(imageDataUrl);
+          sessionId={sessionId}
+          onSubmit={(result) => {
+            setPhoto(result.imageDataUrl);
+            setSessionId(result.session_id);
             setStep('questionnaire');
           }}
         />
@@ -113,7 +114,6 @@ function App() {
       {step === 'questionnaire' && (
         <Questionnaire
           onComplete={(collectedAnswers) => {
-            setAnswers(collectedAnswers);
             console.log('Personal Info:', personalInfo);
             console.log('Photo captured:', photo);
             console.log('Questionnaire answers:', collectedAnswers);
@@ -123,17 +123,9 @@ function App() {
       )}
 
       {/* 5. Loading Screen */}
-      {/* CHANGED: added onComplete so LoadingScreen can move the user forward
-          into the recommendation page once its loading delay/animation finishes.
-          If LoadingScreen doesn't currently call an onComplete prop internally,
-          see the note below this code block for how to add it. */}
-      {step === 'loading' && (
-        <LoadingScreen onComplete={() => setStep('recommendation')} />
-      )}
+      {step === 'loading' && <LoadingScreen />}
 
       {/* 6. Recommendation Page (ADDED) */}
-      {/* Using dummy data for now — RecommendationPage defaults to DUMMY_RESULT
-          when no `result` prop is passed, so this works as-is. */}
       {/* {step === 'recommendation' && <RecommendationPage />} */}
     </>
   );

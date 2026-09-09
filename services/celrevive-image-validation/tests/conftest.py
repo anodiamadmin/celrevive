@@ -3,17 +3,30 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.v1.routes import image_validation as image_validation_route
 from app.main import app
 
 
 @pytest.fixture
-def client() -> TestClient:
-    """
-    FastAPI test client.
+def client(monkeypatch) -> TestClient:
+    """FastAPI test client with persistence mocked for API contract tests."""
+    from uuid import uuid4
 
-    This allows us to test the API without starting a real
-    Uvicorn server.
-    """
+    def fake_persist_accepted_image(**kwargs):
+        from app.services.image_persistence import PersistedImage
+
+        return PersistedImage(
+            session_id=kwargs.get("session_id") or uuid4(),
+            image_id=uuid4(),
+            storage_uri="file:///test/skin-image.jpg",
+            sha256="0" * 64,
+        )
+
+    monkeypatch.setattr(
+        image_validation_route,
+        "persist_accepted_image",
+        fake_persist_accepted_image,
+    )
     return TestClient(app)
 
 
