@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1789193027422" clover="3.2.0">
+  <project timestamp="1789193027423" name="All files">
+    <metrics statements="54" coveredstatements="51" conditionals="74" coveredconditionals="66" methods="15" coveredmethods="14" elements="143" coveredelements="131" complexity="0" loc="54" ncloc="54" packages="1" files="1" classes="1"/>
+    <file name="Questionnaire.jsx" path="D:\Anodiam\celrevive\frontend\src\features\questionnaire\Questionnaire.jsx">
+      <metrics statements="54" coveredstatements="51" conditionals="74" coveredconditionals="66" methods="15" coveredmethods="14"/>
+      <line num="5" count="1" type="stmt"/>
+      <line num="7" count="1" type="stmt"/>
+      <line num="314" count="94" type="stmt"/>
+      <line num="315" count="94" type="stmt"/>
+      <line num="316" count="94" type="stmt"/>
+      <line num="317" count="94" type="stmt"/>
+      <line num="319" count="94" type="stmt"/>
+      <line num="320" count="94" type="stmt"/>
+      <line num="321" count="94" type="stmt"/>
+      <line num="322" count="94" type="stmt"/>
+      <line num="323" count="94" type="stmt"/>
+      <line num="324" count="94" type="stmt"/>
+      <line num="325" count="94" type="stmt"/>
+      <line num="327" count="94" type="cond" truecount="2" falsecount="0"/>
+      <line num="328" count="94" type="cond" truecount="4" falsecount="0"/>
+      <line num="329" count="94" type="cond" truecount="2" falsecount="0"/>
+      <line num="331" count="94" type="stmt"/>
+      <line num="333" count="94" type="stmt"/>
+      <line num="334" count="22" type="stmt"/>
+      <line num="340" count="94" type="stmt"/>
+      <line num="341" count="11" type="stmt"/>
+      <line num="342" count="11" type="cond" truecount="2" falsecount="0"/>
+      <line num="343" count="11" type="stmt"/>
+      <line num="345" count="11" type="stmt"/>
+      <line num="347" count="11" type="cond" truecount="2" falsecount="0"/>
+      <line num="348" count="1" type="cond" truecount="1" falsecount="1"/>
+      <line num="351" count="10" type="stmt"/>
+      <line num="353" count="10" type="cond" truecount="1" falsecount="1"/>
+      <line num="354" count="0" type="stmt"/>
+      <line num="356" count="10" type="cond" truecount="2" falsecount="2"/>
+      <line num="357" count="0" type="stmt"/>
+      <line num="359" count="10" type="stmt"/>
+      <line num="363" count="94" type="stmt"/>
+      <line num="364" count="33" type="cond" truecount="2" falsecount="0"/>
+      <line num="365" count="11" type="stmt"/>
+      <line num="367" count="22" type="stmt"/>
+      <line num="371" count="94" type="stmt"/>
+      <line num="372" count="2" type="cond" truecount="1" falsecount="1"/>
+      <line num="373" count="2" type="stmt"/>
+      <line num="377" count="94" type="stmt"/>
+      <line num="379" count="94" type="stmt"/>
+      <line num="380" count="29" type="cond" truecount="3" falsecount="1"/>
+      <line num="382" count="29" type="cond" truecount="2" falsecount="0"/>
+      <line num="383" count="28" type="stmt"/>
+      <line num="384" count="1" type="cond" truecount="1" falsecount="1"/>
+      <line num="385" count="1" type="stmt"/>
+      <line num="386" count="1" type="stmt"/>
+      <line num="387" count="1" type="stmt"/>
+      <line num="389" count="0" type="stmt"/>
+      <line num="394" count="94" type="stmt"/>
+      <line num="466" count="580" type="cond" truecount="2" falsecount="0"/>
+      <line num="469" count="580" type="stmt"/>
+      <line num="473" count="33" type="stmt"/>
+      <line num="497" count="24" type="stmt"/>
+    </file>
+  </project>
+</coverage>

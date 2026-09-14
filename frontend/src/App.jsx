@@ -71,7 +71,7 @@ import CapturePhoto from './features/camera/CapturePhoto';
 import Questionnaire from './features/questionnaire/Questionnaire';
 import LoadingScreen from './features/recommendation/LoadingScreen';
 // ADDED: import the new Recommendation page
-// import RecommendationPage from './features/recommendation/RecommendationPage';
+import RecommendationPage from './features/recommendation/RecommendationPage';
 
 function App() {
   const [step, setStep] = useState('landing');
@@ -83,11 +83,14 @@ function App() {
     <>
       {/* 1. Landing Page */}
       {step === 'landing' && (
-        <LandingIntro onStartAssessment={() => setStep('personal-info')} />
+        // <LandingIntro onStartAssessment={() => setStep('personal-info')} />
+
+        // Landing page to camera
+        <LandingIntro onStartAssessment={() => setStep('camera')} />
       )}
 
-      {/* 2. Personal Info Form */}
-      {step === 'personal-info' && (
+      {/* 2. Personal Info Form (temporary disabled) */}
+      {/* {step === 'personal-info' && (
         <PersonalInfo
           initialData={personalInfo}
           onPrevious={() => setStep('landing')}
@@ -97,30 +100,32 @@ function App() {
             setStep('camera');     // User ab camera section mein chala jayega
           }}
         />
-      )}
+      )} */}
 
       {/* 3. Camera / Photo Capture */}
       {step === 'camera' && (
         <CapturePhoto
           onSubmit={(imageDataUrl) => {
             setPhoto(imageDataUrl);
-            setStep('questionnaire');
+            // setStep('questionnaire');
+            // for sprint-1
+            setStep('recommendation');
           }}
         />
       )}
 
       {/* 4. Questionnaire */}
-      {step === 'questionnaire' && (
+      {/* {step === 'questionnaire' && (
         <Questionnaire
           onComplete={(collectedAnswers) => {
             setAnswers(collectedAnswers);
-            console.log('Personal Info:', personalInfo);
+            // console.log('Personal Info:', personalInfo);
             console.log('Photo captured:', photo);
             console.log('Questionnaire answers:', collectedAnswers);
             setStep('loading');
           }}
         />
-      )}
+      )} */}
 
       {/* 5. Loading Screen */}
       {/* CHANGED: added onComplete so LoadingScreen can move the user forward
@@ -134,7 +139,7 @@ function App() {
       {/* 6. Recommendation Page (ADDED) */}
       {/* Using dummy data for now — RecommendationPage defaults to DUMMY_RESULT
           when no `result` prop is passed, so this works as-is. */}
-      {/* {step === 'recommendation' && <RecommendationPage />} */}
+      {step === 'recommendation' && <RecommendationPage />}
     </>
   );
 }
