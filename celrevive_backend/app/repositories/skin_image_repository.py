@@ -1,8 +1,11 @@
 import uuid
-from sqlalchemy import update
+
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.customer_session import CustomerSession
 from app.models.skin_image import SkinImage
-from app.models.customer_session import CustomerSession  # existing model
+from app.services.storage_service import read_image_bytes
 
 
 async def create_skin_image(
@@ -28,7 +31,7 @@ async def create_skin_image(
         sha256=sha256,
     )
     db.add(skin_image)
-    await db.flush()  # populates image_id without committing yet
+    await db.flush()
     return skin_image
 
 
@@ -38,3 +41,13 @@ async def mark_session_image_received(db: AsyncSession, *, session_id: uuid.UUID
         .where(CustomerSession.session_id == session_id)
         .values(session_status="IMAGE_RECEIVED", updated_at=text("CURRENT_TIMESTAMP"))
     )
+
+
+async def get_image_bytes_and_mime(
+    db: AsyncSession,
+    *,
+    image_id: uuid.UUID,
+) -> tuple[bytes, str]:
+    result = await db.execute(select(SkinImage).where(SkinImage.image_id == image_id))
+    image = result.scalar_one()
+    return read_image_bytes(image.storage_uri), image.mime_type or "application/octet-stream"

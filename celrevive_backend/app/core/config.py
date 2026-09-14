@@ -15,6 +15,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/celrevive"
+    SKIN_IMAGE_STORAGE_ROOT: str = "./data/skin_images"
+    VISUAL_AI_MODEL: str = "gemini-2.5-pro"
+    GEMINI_API_KEY: str | None = None
+
     # --- File constraints ---
     # NOTE: kept as a plain str field (not List[str]) because pydantic-settings
     # requires JSON syntax in .env for list-typed fields (e.g. ["a","b"]).

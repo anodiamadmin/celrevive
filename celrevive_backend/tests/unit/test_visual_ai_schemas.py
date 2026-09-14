@@ -1,91 +1,63 @@
 import pytest
 from pydantic import ValidationError
-from app.schemas.visual_ai import VisualAIResponse
+
+from app.schemas.visual_ai import SUPPORTED_IMAGE_CONCERNS, VisualAIResponse
 
 
-def test_valid_ai_response_is_accepted():
-    """Valid IDs (e.g., SC0001, SC1001) should be parsed without issue."""
-    payload = {
+def make_template_payload() -> dict:
+    return {
         "image_skin_concerns": [
             {
-                "skin_concern_id": "SC0001",
-                "skin_concern_name": "Dry Skin",
-                "skin_concern_exists": True,
-                "if_skin_concern_true_why": "Visible flaking on cheeks."
-            }
-        ]
-    }
-
-    response = VisualAIResponse(**payload)
-    assert len(response.image_skin_concerns) == 1
-    assert response.image_skin_concerns[0].skin_concern_id == "SC0001"
-
-
-def test_duplicate_concern_ids_are_deduplicated():
-    """If the AI hallucinates the same ID twice, the second instance should be dropped."""
-    payload = {
-        "image_skin_concerns": [
-            {
-                "skin_concern_id": "SC0008",
-                "skin_concern_name": "Acne",
-                "skin_concern_exists": True,
-                "if_skin_concern_true_why": "First instance."
-            },
-            {
-                "skin_concern_id": "SC0008",
-                "skin_concern_name": "Acne",
+                "skin_concern_id": concern_id,
+                "skin_concern_name": concern_id,
                 "skin_concern_exists": False,
-                "if_skin_concern_true_why": "Duplicate instance."
+                "if_skin_concern_true_why": "",
             }
+            for concern_id in sorted(SUPPORTED_IMAGE_CONCERNS)
         ]
     }
 
-    response = VisualAIResponse(**payload)
-    assert len(response.image_skin_concerns) == 1
-    # Should keep the first instance
-    assert response.image_skin_concerns[0].if_skin_concern_true_why == "First instance."
+
+def test_complete_template_is_accepted():
+    payload = make_template_payload()
+    payload["image_skin_concerns"][0]["skin_concern_exists"] = True
+    payload["image_skin_concerns"][0]["if_skin_concern_true_why"] = "Visible evidence."
+
+    response = VisualAIResponse.model_validate(payload)
+
+    assert len(response.image_skin_concerns) == 28
 
 
-def test_unsupported_ids_are_filtered_out():
-    """IDs that are questionnaire-only (e.g., SC2001) or completely invalid should be dropped."""
-    payload = {
-        "image_skin_concerns": [
-            {
-                "skin_concern_id": "SC0005",
-                "skin_concern_name": "Redness",
-                "skin_concern_exists": True,
-                "if_skin_concern_true_why": "Valid visual concern."
-            },
-            {
-                "skin_concern_id": "SC2001",
-                "skin_concern_name": "Itching / Irritation",
-                "skin_concern_exists": True,
-                "if_skin_concern_true_why": "Questionnaire-only concern."
-            },
-            {
-                "skin_concern_id": "INVALID_ID",
-                "skin_concern_name": "Nonsense",
-                "skin_concern_exists": True,
-                "if_skin_concern_true_why": "Hallucination."
-            }
-        ]
-    }
+def test_duplicate_and_unsupported_ids_are_filtered_before_coverage_check():
+    payload = make_template_payload()
+    payload["image_skin_concerns"].append(payload["image_skin_concerns"][0].copy())
+    payload["image_skin_concerns"].append(
+        {
+            "skin_concern_id": "SC2001",
+            "skin_concern_name": "Questionnaire-only",
+            "skin_concern_exists": False,
+            "if_skin_concern_true_why": "",
+        }
+    )
 
-    response = VisualAIResponse(**payload)
-    assert len(response.image_skin_concerns) == 1
-    assert response.image_skin_concerns[0].skin_concern_id == "SC0005"
+    response = VisualAIResponse.model_validate(payload)
+
+    assert len(response.image_skin_concerns) == 28
+    assert len({item.skin_concern_id for item in response.image_skin_concerns}) == 28
 
 
-def test_malformed_payload_raises_validation_error():
-    """Missing required fields should trigger a strict Pydantic ValidationError."""
-    payload = {
-        "image_skin_concerns": [
-            {
-                "skin_concern_id": "SC0001"
-                # Missing all other required fields
-            }
-        ]
-    }
+def test_incomplete_template_raises_validation_error():
+    payload = make_template_payload()
+    payload["image_skin_concerns"] = payload["image_skin_concerns"][:-1]
 
-    with pytest.raises(ValidationError):
-        VisualAIResponse(**payload)
+    with pytest.raises(ValidationError, match="missing 1 required concern"):
+        VisualAIResponse.model_validate(payload)
+
+
+def test_false_concern_explanation_is_cleared():
+    payload = make_template_payload()
+    payload["image_skin_concerns"][0]["if_skin_concern_true_why"] = "Should be cleared."
+
+    response = VisualAIResponse.model_validate(payload)
+
+    assert response.image_skin_concerns[0].if_skin_concern_true_why == ""

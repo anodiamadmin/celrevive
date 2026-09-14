@@ -137,6 +137,6 @@
       "skin_concern_name": "Microbiome Imbalance Risk",
       "skin_concern_exists": false,
       "if_skin_concern_true_why": ""
-    },
+    }
   ]
 }

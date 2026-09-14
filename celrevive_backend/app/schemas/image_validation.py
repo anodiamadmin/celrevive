@@ -40,3 +40,5 @@ class ImageValidationResponse(BaseModel):
     message: str
     # Kept out of the default frontend message but included for debugging/logging on the client if needed
     reasons: List[RejectionReason] = Field(default_factory=list)
+    image_id: Optional[str] = None
+    next_step: Optional[str] = None

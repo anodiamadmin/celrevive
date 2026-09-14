@@ -97,3 +97,6 @@ junit.xml
 
 # Dedicated folder for AI prompt files
 .ai_prompts/
+
+# Local image uploads
+data/skin_images/

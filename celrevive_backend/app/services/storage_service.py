@@ -1,10 +1,12 @@
 import hashlib
-import os
 import uuid
 from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+from app.core.config import get_settings
 
 # Swap this for an S3/GCS-backed implementation later; interface stays the same.
-LOCAL_STORAGE_ROOT = Path(os.getenv("SKIN_IMAGE_STORAGE_ROOT", "./data/skin_images"))
+LOCAL_STORAGE_ROOT = Path(get_settings().SKIN_IMAGE_STORAGE_ROOT)
 LOCAL_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
 
 
@@ -30,3 +32,13 @@ def save_image_bytes(image_bytes: bytes, session_id: uuid.UUID, extension: str) 
         sha256=sha256,
         file_size_bytes=len(image_bytes),
     )
+
+
+def read_image_bytes(storage_uri: str) -> bytes:
+    parsed = urlparse(storage_uri)
+    if parsed.scheme != "file":
+        raise ValueError(f"Unsupported storage URI scheme: {parsed.scheme}")
+    path = unquote(parsed.path)
+    if len(path) > 2 and path[0] == "/" and path[2] == ":":
+        path = path[1:]
+    return Path(path).read_bytes()
