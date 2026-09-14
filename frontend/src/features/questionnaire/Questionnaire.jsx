@@ -342,7 +342,7 @@ export default function Questionnaire({ onComplete }) {
       const current = prev[currentQuestion.id] || [];
       const alreadySelected = current.includes(option);
 
-      const exclusiveOptions = ['No', 'Prefer not to say', 'No recent treatments', 'None', 'I use very few skincare products'];
+      const exclusiveOptions = ['No', 'Prefer not to say', 'No recent treatments', 'None','None of the above', 'I use very few skincare products'];
 
       if (exclusiveOptions.includes(option)) {
         return { ...prev, [currentQuestion.id]: alreadySelected ? [] : [option] };

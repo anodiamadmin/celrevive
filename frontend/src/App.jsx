@@ -83,11 +83,14 @@ function App() {
     <>
       {/* 1. Landing Page */}
       {step === 'landing' && (
-        <LandingIntro onStartAssessment={() => setStep('personal-info')} />
+        // <LandingIntro onStartAssessment={() => setStep('personal-info')} />
+
+        // Landing page to camera
+        <LandingIntro onStartAssessment={() => setStep('camera')} />
       )}
 
-      {/* 2. Personal Info Form */}
-      {step === 'personal-info' && (
+      {/* 2. Personal Info Form (temporary disabled) */}
+      {/* {step === 'personal-info' && (
         <PersonalInfo
           initialData={personalInfo}
           onPrevious={() => setStep('landing')}
@@ -97,7 +100,7 @@ function App() {
             setStep('camera');     // User ab camera section mein chala jayega
           }}
         />
-      )}
+      )} */}
 
       {/* 3. Camera / Photo Capture */}
       {step === 'camera' && (
@@ -114,7 +117,7 @@ function App() {
         <Questionnaire
           onComplete={(collectedAnswers) => {
             setAnswers(collectedAnswers);
-            console.log('Personal Info:', personalInfo);
+            // console.log('Personal Info:', personalInfo);
             console.log('Photo captured:', photo);
             console.log('Questionnaire answers:', collectedAnswers);
             setStep('loading');
