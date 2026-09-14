@@ -9,7 +9,7 @@ export default function LoadingScreen() {
 
       {/* Loading Text */}
       <h2 className="mt-8 text-xl font-semibold tracking-wide text-[var(--text-h)] md:text-2xl">
-        Customizing your solution...
+        {/* Customizing your solution... */}
       </h2>
     </div>
   );

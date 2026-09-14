@@ -71,7 +71,7 @@ import CapturePhoto from './features/camera/CapturePhoto';
 import Questionnaire from './features/questionnaire/Questionnaire';
 import LoadingScreen from './features/recommendation/LoadingScreen';
 // ADDED: import the new Recommendation page
-// import RecommendationPage from './features/recommendation/RecommendationPage';
+import RecommendationPage from './features/recommendation/RecommendationPage';
 
 function App() {
   const [step, setStep] = useState('landing');
@@ -107,13 +107,15 @@ function App() {
         <CapturePhoto
           onSubmit={(imageDataUrl) => {
             setPhoto(imageDataUrl);
-            setStep('questionnaire');
+            // setStep('questionnaire');
+            // for sprint-1
+            setStep('recommendation');
           }}
         />
       )}
 
       {/* 4. Questionnaire */}
-      {step === 'questionnaire' && (
+      {/* {step === 'questionnaire' && (
         <Questionnaire
           onComplete={(collectedAnswers) => {
             setAnswers(collectedAnswers);
@@ -123,7 +125,7 @@ function App() {
             setStep('loading');
           }}
         />
-      )}
+      )} */}
 
       {/* 5. Loading Screen */}
       {/* CHANGED: added onComplete so LoadingScreen can move the user forward
@@ -137,7 +139,7 @@ function App() {
       {/* 6. Recommendation Page (ADDED) */}
       {/* Using dummy data for now — RecommendationPage defaults to DUMMY_RESULT
           when no `result` prop is passed, so this works as-is. */}
-      {/* {step === 'recommendation' && <RecommendationPage />} */}
+      {step === 'recommendation' && <RecommendationPage />}
     </>
   );
 }

@@ -1723,6 +1723,12 @@ export default function CapturePhoto({ onSubmit }) {
     try {
       // Fake network delay of 200ms added here 👇
       await new Promise((resolve) => setTimeout(resolve, 200));
+      // ====================================================================
+      // 🚀 MOCK API TOGGLE (FOR TESTING):
+      // Set to 'true' -> Tests successful upload & moves to next step.
+      // Set to 'false' -> Tests the rejection flow & shows red error text.
+      // TODO: Replace this entire function logic when real backend is ready.
+      // ====================================================================
       const isValid = true;
       return isValid;
     } catch (error) {
