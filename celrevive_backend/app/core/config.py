@@ -7,17 +7,24 @@ touching code.
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=BACKEND_ROOT / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/celrevive"
     SKIN_IMAGE_STORAGE_ROOT: str = "./data/skin_images"
-    VISUAL_AI_MODEL: str = "gemini-2.5-pro"
+    VISUAL_AI_MODEL: str = "gemini-2.5-flash"
     GEMINI_API_KEY: str | None = None
 
     # --- File constraints ---

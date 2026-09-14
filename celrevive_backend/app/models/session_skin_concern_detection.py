@@ -4,6 +4,8 @@ from sqlalchemy import ForeignKey, String, Text, Boolean, TIMESTAMP, CheckConstr
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
+from app.models.questionnaire_response import QuestionnaireResponse
+from app.models.skin_concern import SkinConcern
 
 
 class SessionSkinConcernDetection(Base):

@@ -38,4 +38,3 @@ async def run_visual_ai_analysis(image_id: uuid.UUID, session_id: uuid.UUID) -> 
             # TODO: mark session_status='ERROR' or queue a retry
         except Exception:
             logger.exception("Visual AI background task failed for image_id=%s session_id=%s", image_id, session_id)
-            raise
