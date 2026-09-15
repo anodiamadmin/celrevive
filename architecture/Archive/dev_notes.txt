@@ -1,0 +1,194 @@
+## Setup Checklist
+
+1. Open PowerShell in `celrevive_backend`:
+
+```powershell
+cd C:\Personal\celrevive\celrevive_backend
+```
+
+2. Create and activate a virtual environment:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+3. Install dependencies:
+
+```powershell
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+4. Create `.env` from `.env.example` and configure:
+
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/celrevive
+GEMINI_API_KEY=your-key-here
+VISUAL_AI_MODEL=gemini-2.5-pro
+SKIN_IMAGE_STORAGE_ROOT=./data/skin_images
+```
+
+5. Start PostgreSQL and create the `celrevive` database.
+
+6. Run the attached DDL:
+
+```powershell
+psql -U postgres -d celrevive -f ..\architecture\database\CelRevive_DDL_updated.sql
+```
+
+7. Load the reference data, especially `skin_concern` rows:
+
+```powershell
+psql -U postgres -d celrevive -f ..\architecture\database\CelRevive_DML_Primary_Insert_updated.sql
+```
+
+8. Create at least one `customer_session` row with status `STARTED` and consent enabled. The upload route currently requires its UUID as the multipart `session_id` field.
+
+9. Start the backend:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+10. Test the endpoint using the session UUID:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/api/v1/image-validation" `
+  -F "session_id=YOUR_SESSION_UUID" `
+  -F "image=@C:\path\to\valid-image.jpg"
+```
+
+11. Confirm a successful response contains:
+
+```json
+{
+  "valid": true,
+  "image_id": "...",
+  "next_step": "questionnaire"
+}
+```
+
+12. Verify:
+- The image exists under `data/skin_images`.
+- `skin_image` contains the metadata row.
+- `customer_session.session_status` becomes `IMAGE_RECEIVED`.
+- The background task sends the image to Gemini.
+- `session_skin_concern_detection` receives all 28 concern rows.
+
+13. Run tests after installation:
+
+```powershell
+python -m pytest -q
+```
+
+The questionnaire template is currently only a corrected JSON artifact. Questionnaire processing is not part of the implemented 1.1–2.5 image-analysis flow.
+
+
+
+
+## Codebase Changes Required
+
+### Already implemented
+
+- Add async database infrastructure:
+  - `app/core/database.py`
+  - `app/db/base.py`
+- Add `CustomerSession` ORM model.
+- Complete `SkinImage` and detection ORM models.
+- Implement multipart `/api/v1/image-validation`.
+- Implement `accept_validated_image()`.
+- Store accepted images locally.
+- Add `get_image_bytes_and_mime()`.
+- Update session status to `IMAGE_RECEIVED`.
+- Trigger Visual AI only after database commit.
+- Remove the obsolete URL-based `/analyze-image` route.
+- Use `google-genai` with structured Pydantic output.
+- Persist all 28 Visual AI concern rows.
+- Preserve raw AI output.
+- Add DDL source-reference constraints.
+- Add configurable database, storage, Gemini key, and model settings.
+- Add local storage to `.gitignore`.
+- Fix and validate both JSON templates.
+- Update Visual AI schema tests.
+
+### Still required before the system runs
+
+1. Install dependencies from `requirements.txt`.
+
+2. Configure `.env` with:
+   - `DATABASE_URL`
+   - `GEMINI_API_KEY`
+   - `VISUAL_AI_MODEL`
+   - `SKIN_IMAGE_STORAGE_ROOT`
+
+3. Create the PostgreSQL database.
+
+4. Run the DDL and primary seed data.
+
+5. Create a valid `customer_session` before uploading an image.
+
+6. Test the multipart request with:
+   - `image`
+   - `session_id`
+
+7. Confirm PostgreSQL contains the required `skin_concern` reference rows. Detection persistence will fail if those rows are missing.
+
+8. Run and repair the full test suite. The existing API tests still assume image validation can run without a `session_id`; they need to be updated for the new intake contract.
+
+9. Add integration tests for:
+   - successful image storage
+   - session status update
+   - commit-before-background-task ordering
+   - missing session handling
+   - image/session mismatch
+   - Visual AI persistence
+   - retry idempotency
+   - background-task failures
+
+10. Decide whether the questionnaire template should later be copied into the backend package. It is currently valid JSON, but questionnaire processing is outside 1.1–2.5 and is not wired into the image-analysis flow.
+
+The main remaining work is environment/database setup and integration-test completion, rather than another major application redesign.
+
+
+
+session id
+8dba5241-bb99-4158-b130-74b53c0f6d94
+
+verification
+SELECT image_id, session_id, storage_uri, mime_type, file_size_bytes
+FROM skin_image
+WHERE image_id = '458290f9-2d9b-4996-ad30-4621a2834623';
+
+SELECT session_id, session_status
+FROM customer_session
+WHERE session_id = '8dba5241-bb99-4158-b130-74b53c0f6d94';
+
+SELECT concern_id, skin_concern_exists, detection_source
+FROM session_skin_concern_detection
+WHERE image_id = '458290f9-2d9b-4996-ad30-4621a2834623';
+
+
+
+SELECT
+    concern_id,
+    skin_concern_exists,
+    if_skin_concern_true_why,
+    raw_detection_json IS NOT NULL AS has_raw_response
+FROM session_skin_concern_detection
+WHERE image_id = 'fbe8866d-f78d-4567-b046-3e4c6d417ca1'
+ORDER BY concern_id;
+
+
+testing
+# Visual AI schema tests
+python -m pytest tests/unit/test_visual_ai_schemas.py -q
+
+# Gemini client tests
+python -m pytest tests/unit/test_visual_ai_client.py -q
+
+# Persistence and worker tests
+python -m pytest tests/unit/test_visual_ai_persistence.py -q
+
+# Multipart API tests
+python -m pytest tests/api/test_image_validation_api.py -q
