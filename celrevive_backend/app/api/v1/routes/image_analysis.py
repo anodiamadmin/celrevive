@@ -1,6 +1,7 @@
 import uuid
 from pathlib import Path
 from typing import Optional
+import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
@@ -25,6 +26,8 @@ from app.repositories.skin_concern_detection_repository import (
 from app.schemas.recommendation import RecommendationResponse
 router = APIRouter()
 
+# Initialize the logger for this specific route
+logger = logging.getLogger("celrevive_backend.api")
 
 @router.post("/image-analysis", response_model=RecommendationResponse, status_code=status.HTTP_200_OK)
 async def analyze_and_recommend(
@@ -93,8 +96,14 @@ async def analyze_and_recommend(
     # Monitor TTFB (Time to First Byte) on the frontend to ensure this doesn't cause Shopify
     # App Proxy timeout errors (Shopify enforces a strict timeout on proxy responses).
     try:
+        logger.info(f"Triggering Gemini AI for session_id: {session_id}")
         ai_result = await run_in_threadpool(call_visual_ai, file_bytes, image.content_type)
+        # Log the raw success payload returned by Gemini
+        logger.info(f"Gemini AI Success for {session_id}. Raw payload: {ai_result.raw}")
+
     except (VisualAIAPIError, VisualAIMalformedResponseError) as exc:
+        # Log the exact failure reason
+        logger.error(f"Gemini AI Failed for {session_id}. Reason: {str(exc)}")
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
 
     await store_visual_ai_detections(db, session_id=session_id, image_id=skin_img.image_id,
