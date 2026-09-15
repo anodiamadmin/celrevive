@@ -71,6 +71,7 @@ async def get_detected_image_concerns_by_session(
             SessionSkinConcernDetection.detection_source == "IMAGE",
             SessionSkinConcernDetection.skin_concern_exists.is_(True),
         )
+        .distinct()  # <--- This guarantees no duplicates are returned
         .order_by(SkinConcern.concern_id.asc())
     )
     result = await db.execute(stmt)
