@@ -116,16 +116,21 @@ async def analyze_and_recommend(
     display_name = user_full_name.strip() if user_full_name and user_full_name.strip() else "Valued Customer"
 
     if not detected_concerns:
-        return RecommendationResponse(
+        final_response = RecommendationResponse(
             session_id=session_id,
             user_full_name=display_name,
             message="Your skin looks perfect!",
             primary_concerns=[],
         )
-
-    return RecommendationResponse(
-        session_id=session_id,
-        user_full_name=display_name,
-        message="Primary skin concerns detected from image analysis.",
-        primary_concerns=detected_concerns,
-    )
+    else:
+        final_response = RecommendationResponse(
+            session_id=session_id,
+            user_full_name=display_name,
+            message="Primary skin concerns detected from image analysis.",
+            primary_concerns=detected_concerns,
+        )
+    # Log the exact payload going back to the frontend
+    # Using model_dump_json(indent=2) makes it highly readable in terminal
+    logger.info(f"Final API Response payload for {session_id}:\n{final_response.model_dump_json(indent=2)}")
+    # Return it to the Shopify widget
+    return final_response
