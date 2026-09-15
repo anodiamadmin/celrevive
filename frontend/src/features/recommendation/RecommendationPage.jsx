@@ -135,50 +135,259 @@
 
 
 
-const DUMMY_RESULT = {
-  userName: 'Emma',
-  hasConcerns: false, // 👈  'false' , "We could not find any concern!" dikhega
-  skinAnalysis: {
-    primaryConcerns: 'Active acne, Sebum production, Pore visibility.', 
-  }
-};
+// const DUMMY_RESULT = {
+//   userName: 'Emma',
+//   hasConcerns: false, // 👈  'false' , "We could not find any concern!" dikhega
+//   skinAnalysis: {
+//     primaryConcerns: 'Active acne, Sebum production, Pore visibility.', 
+//   }
+// };
 
-export default function RecommendationPage({ result = DUMMY_RESULT }) {
-  // Result se sirf userName, hasConcerns aur skinAnalysis nikal liya
-  const { userName, hasConcerns, skinAnalysis } = result;
+// export default function RecommendationPage({ result = DUMMY_RESULT }) {
+//   // Result se sirf userName, hasConcerns aur skinAnalysis nikal liya
+//   const { userName, hasConcerns, skinAnalysis } = result;
+
+//   return (
+//     <div className="min-h-screen bg-white px-10 pb-12 pt-6 sm:px-16">
+//       {/* Greeting */}
+//       <div className="mb-6">
+//         <h1 className="text-4xl font-semibold text-slate-900">Hello {userName}!</h1>
+//         <p className="mt-2 text-base text-gray-500">Your detailed report is ready.</p>
+//       </div>
+
+//       <div className="flex flex-col items-start gap-6">
+        
+//         {/* ONLY Left card: Skin Analysis Result */}
+//         {/* (w-full aur lg:w-[46%] rakha hai taaki card ki width design jaisi hi rahe) */}
+//         <div className="w-full rounded-2xl border border-gray-200 bg-white p-8 lg:w-[46%]">
+//           <h2 className="mb-6 text-xl font-medium text-teal-800">
+//             Skin Analysis Result:
+//           </h2>
+
+//           <div className="space-y-4 text-[15px] leading-relaxed text-slate-800">
+//             {/* Condition: Agar concerns hain toh Primary Concerns dikhao, warna No Concern message */}
+//             {hasConcerns ? (
+//               <p>
+//                 <span className="font-semibold">Primary Concerns:</span>{' '}
+//                 {skinAnalysis.primaryConcerns}
+//               </p>
+//             ) : (
+//             //   <p className="font-medium text-slate-800">
+//               <p className="text-base font-medium text-red-500">
+//                 We could not find any concern!
+//               </p>
+//             )}
+//           </div>
+//         </div>
+
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+// const DUMMY_RESULT = {
+//   user_full_name: 'Emma',
+//   primary_concerns: ['Active acne', 'Sebum production', 'Pore visibility'] 
+// };
+
+// export default function RecommendationPage({ result }) {
+//   // Safe fallback agar result empty ya undefined aaye
+//   const finalResult = result && Object.keys(result).length > 0 ? result : DUMMY_RESULT;
+
+//   const user_full_name = finalResult.user_full_name || finalResult.userName || 'Valued Customer';
+//   const rawConcerns = finalResult.primary_concerns || finalResult.skinAnalysis?.primaryConcerns || [];
+
+//   // Check karo ki concerns hain ya nahi
+//   const hasConcerns = Array.isArray(rawConcerns) ? rawConcerns.length > 0 : Boolean(rawConcerns);
+
+//   // Agar concerns objects hain ( jaise {name: 'Acne'} ya {skin_concern_name: 'Acne'}), toh unhe text mein convert karo
+//   let formattedConcerns = '';
+//   if (Array.isArray(rawConcerns)) {
+//     formattedConcerns = rawConcerns
+//       .map(item => (typeof item === 'object' ? item.name || item.skin_concern_name : item))
+//       .filter(Boolean)
+//       .join(', ');
+//   } else {
+//     formattedConcerns = String(rawConcerns);
+//   }
+
+//   const isConcernAvailable = Boolean(formattedConcerns && formattedConcerns.trim().length > 0);
+
+//   return (
+//     <div className="min-h-screen bg-white px-10 pb-12 pt-6 sm:px-16">
+      
+//       {/* Greeting Section */}
+//       <div className="mb-6">
+//         <h1 className="text-4xl font-semibold text-slate-900">Hello {user_full_name}!</h1>
+//         <p className="mt-2 text-base text-gray-500">Your detailed report is ready.</p>
+//       </div>
+
+//       <div className="flex flex-col items-start gap-6">
+        
+//         {/* Skin Analysis Result Card */}
+//         <div className="w-full rounded-2xl border border-gray-200 bg-white p-8 lg:w-[46%] shadow-sm">
+//           <h2 className="mb-6 text-xl font-medium text-teal-800">
+//             Skin Analysis Result:
+//           </h2>
+
+//           <div className="space-y-4 text-[15px] leading-relaxed text-slate-800">
+            
+//             {isConcernAvailable ? (
+//               <p>
+//                 <span className="font-semibold text-slate-900">Primary Concerns Detected:</span>{' '}
+//                 <br />
+//                 <span className="text-slate-700">{formattedConcerns}</span>
+//               </p>
+//             ) : (
+//               <div className="rounded-lg bg-green-50 p-4 border border-green-100">
+//                 <p className="text-base font-semibold text-green-700">
+//                   Your skin is looking great! ✨
+//                 </p>
+//                 <p className="mt-1 text-sm text-green-600">
+//                   We could not find any major concerns.
+//                 </p>
+//               </div>
+//             )}
+            
+//           </div>
+//         </div>
+
+//       </div>
+//     </div>
+//   );
+// }
+
+// import React from 'react';
+// import { CheckCircle2, Sparkles } from 'lucide-react';
+
+// export default function RecommendationPage({ result }) {
+//   const data = result || {};
+//   const userName = data.user_full_name || data.userName || 'Valued Customer';
+  
+//   // Terminal wale 'image_skin_concerns' array ko nikalna
+//   const allConcerns = data.image_skin_concerns || [];
+
+//   // Sirf unhi concerns ke naam lena jinka 'skin_concern_exists' TRUE hai
+//   const activeConcerns = allConcerns
+//     .filter((item) => item.skin_concern_exists === true)
+//     .map((item) => item.skin_concern_name);
+
+//   return (
+//     <div className="min-h-screen bg-slate-50 px-6 py-10 sm:px-16">
+      
+//       {/* Greeting Header */}
+//       <div className="mb-8">
+//         <h1 className="text-3xl font-bold text-slate-900">Hello {userName}! 👋</h1>
+//         <p className="mt-1 text-sm text-slate-500">Your detailed report is ready.</p>
+//       </div>
+
+//       <div className="max-w-xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+//         <h2 className="mb-6 text-xl font-semibold text-teal-800 border-b pb-3">
+//           Skin Analysis Result:
+//         </h2>
+
+//         {activeConcerns.length > 0 ? (
+//           <div>
+//             <p className="mb-4 text-sm font-semibold text-slate-900">
+//               Primary Concerns Detected:
+//             </p>
+//             <ul className="space-y-3">
+//               {activeConcerns.map((concernName, index) => (
+//                 <li 
+//                   key={index} 
+//                   className="flex items-center gap-3 rounded-lg bg-slate-50 p-3 border border-slate-100"
+//                 >
+//                   <CheckCircle2 className="h-5 w-5 text-teal-600 shrink-0" />
+//                   <span className="font-medium text-slate-800 text-sm">
+//                     {concernName}
+//                   </span>
+//                 </li>
+//               ))}
+//             </ul>
+//           </div>
+//         ) : (
+//           /* Agar koi concern true nahi hai (Perfect Skin) */
+//           <div className="flex flex-col items-center justify-center rounded-xl bg-green-50 p-6 text-center border border-green-100">
+//             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+//               <Sparkles className="h-6 w-6" />
+//             </div>
+//             <h3 className="text-lg font-bold text-green-800">Your Skin is Looking Great!</h3>
+//             <p className="mt-1 text-sm text-green-700">
+//               We could not find any major concerns.
+//             </p>
+//           </div>
+//         )}
+
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+import React from 'react';
+import { CheckCircle2, Sparkles } from 'lucide-react';
+
+export default function RecommendationPage({ result }) {
+  console.log("RecommendationPage final result received:", result);
+
+  // 1. Fallback agar result khali ho
+  const data = result || {};
+  const userName = data.user_full_name || 'Valued Customer';
+  
+  // 2. Backend ka 'primary_concerns' array nikalna
+  const rawConcerns = data.primary_concerns || [];
+
+  // 3. Duplicate values ko hatane ke liye JavaScript 'Set' ka use kiya hai
+  const uniqueConcerns = [...new Set(rawConcerns)];
 
   return (
-    <div className="min-h-screen bg-white px-10 pb-12 pt-6 sm:px-16">
-      {/* Greeting */}
-      <div className="mb-6">
-        <h1 className="text-4xl font-semibold text-slate-900">Hello {userName}!</h1>
-        <p className="mt-2 text-base text-gray-500">Your detailed report is ready.</p>
+    <div className="min-h-screen bg-slate-50 px-6 py-10 sm:px-16">
+      
+      {/* Greeting Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-900">Hello {userName}! 👋</h1>
+        <p className="mt-1 text-sm text-slate-500">Your detailed report is ready.</p>
       </div>
 
-      <div className="flex flex-col items-start gap-6">
-        
-        {/* ONLY Left card: Skin Analysis Result */}
-        {/* (w-full aur lg:w-[46%] rakha hai taaki card ki width design jaisi hi rahe) */}
-        <div className="w-full rounded-2xl border border-gray-200 bg-white p-8 lg:w-[46%]">
-          <h2 className="mb-6 text-xl font-medium text-teal-800">
-            Skin Analysis Result:
-          </h2>
+      <div className="max-w-xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <h2 className="mb-6 text-xl font-semibold text-teal-800 border-b pb-3">
+          Skin Analysis Result:
+        </h2>
 
-          <div className="space-y-4 text-[15px] leading-relaxed text-slate-800">
-            {/* Condition: Agar concerns hain toh Primary Concerns dikhao, warna No Concern message */}
-            {hasConcerns ? (
-              <p>
-                <span className="font-semibold">Primary Concerns:</span>{' '}
-                {skinAnalysis.primaryConcerns}
-              </p>
-            ) : (
-            //   <p className="font-medium text-slate-800">
-              <p className="text-base font-medium text-red-500">
-                We could not find any concern!
-              </p>
-            )}
+        {uniqueConcerns.length > 0 ? (
+          <div>
+            <p className="mb-4 text-sm font-semibold text-slate-900">
+              Primary Concerns Detected:
+            </p>
+            <ul className="space-y-3">
+              {uniqueConcerns.map((concernName, index) => (
+                <li 
+                  key={index} 
+                  className="flex items-center gap-3 rounded-lg bg-slate-50 p-3 border border-slate-100"
+                >
+                  <CheckCircle2 className="h-5 w-5 text-teal-600 shrink-0" />
+                  <span className="font-medium text-slate-800 text-sm">
+                    {concernName}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        ) : (
+          /* Agar koi concern nahi hai (Perfect Skin) */
+          <div className="flex flex-col items-center justify-center rounded-xl bg-green-50 p-6 text-center border border-green-100">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-bold text-green-800">Your Skin is Looking Great!</h3>
+            <p className="mt-1 text-sm text-green-700">
+              We could not find any major concerns.
+            </p>
+          </div>
+        )}
 
       </div>
     </div>
