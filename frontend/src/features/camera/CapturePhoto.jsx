@@ -2551,12 +2551,12 @@ const validateImage = async (imageData) => {
     try {
       const imageFile = dataURLtoFile(imageData, 'selfie.jpg');
       const formData = new FormData();
-      const sessionId = "5581e1d0-4e59-448c-b5a3-1187c05c2365"; 
+      const sessionId = crypto.randomUUID(); 
 
       formData.append('image', imageFile);
       formData.append('session_id', sessionId);
 
-      const res = await fetch('http://localhost:8000/api/v1/image-analysis', {
+      const res = await fetch('/apps/celrevive-backend/image-analysis', {
         method: 'POST',
         body: formData,
       });
