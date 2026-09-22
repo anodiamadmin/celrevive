@@ -192,3 +192,25 @@ python -m pytest tests/unit/test_visual_ai_persistence.py -q
 
 # Multipart API tests
 python -m pytest tests/api/test_image_validation_api.py -q
+
+
+#adding in a customer_session field
+INSERT INTO customer_session (
+    shopify_customer_id,
+    shopify_customer_email,
+    shopify_cart_id,
+    shopify_checkout_id,
+    consent_given,
+    session_status,
+    notes
+)
+VALUES (
+    'SHOPIFY-CUST-10001',
+    'customer@example.com',
+    'cart_10001',
+    'checkout_10001',
+    TRUE,
+    'STARTED',
+    'Customer session initiated with consent.'
+);
+
