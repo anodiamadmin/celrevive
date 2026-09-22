@@ -6,3 +6,5 @@ install requirements
 cp .env.example .env
 uvicorn app.main:app --reload
 
+Add background workers as services for production instead of asyncio worker - test shopify's timeout sensitivity 
+Make sure images are uploaded only once from shopify frontend . Will be accessed by the backend workers via reference token from the storage. 
