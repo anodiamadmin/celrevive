@@ -1,76 +1,13 @@
-// import { useState } from 'react';
+
+
+
+
+// import { useState, useEffect } from 'react';
 // import LandingIntro from './features/landing/LandingIntro';
 // import PersonalInfo from './features/personalInfo/PersonalInfo';
 // import CapturePhoto from './features/camera/CapturePhoto';
 // import Questionnaire from './features/questionnaire/Questionnaire';
 // import LoadingScreen from './features/recommendation/LoadingScreen';
-
-// function App() {
-//   const [step, setStep] = useState('landing');
-//   const [personalInfo, setPersonalInfo] = useState(null);
-//   const [photo, setPhoto] = useState(null);
-//   const [answers, setAnswers] = useState(null);
-
-//   return (
-//     <>
-//       {/* 1. Landing Page */}
-//       {step === 'landing' && (
-//         <LandingIntro onStartAssessment={() => setStep('personal-info')} />
-//       )}
-
-//       {/* 2. Personal Info Form */}
-//       {step === 'personal-info' && (
-//         <PersonalInfo
-//           initialData={personalInfo}
-//           onPrevious={() => setStep('landing')}
-//           // CHANGES HERE: 'onNext' ko 'onSaved' kar diya hai taaki component ke prop se match ho sake
-//           onSaved={(data) => {
-//             setPersonalInfo(data); // User ka data save ho gaya
-//             setStep('camera');     // User ab camera section mein chala jayega
-//           }}
-//         />
-//       )}
-
-//       {/* 3. Camera / Photo Capture */}
-//       {step === 'camera' && (
-//         <CapturePhoto
-//           onSubmit={(imageDataUrl) => {
-//             setPhoto(imageDataUrl);
-//             setStep('questionnaire');
-//           }}
-//         />
-//       )}
-
-//       {/* 4. Questionnaire */}
-//       {step === 'questionnaire' && (
-//         <Questionnaire
-//           onComplete={(collectedAnswers) => {
-//             setAnswers(collectedAnswers);
-//             console.log('Personal Info:', personalInfo);
-//             console.log('Photo captured:', photo);
-//             console.log('Questionnaire answers:', collectedAnswers);
-//             setStep('loading');
-//           }}
-//         />
-//       )}
-
-//       {/* 5. Loading Screen */}
-//       {step === 'loading' && <LoadingScreen />}
-//     </>
-//   );
-// }
-
-// export default App;
-
-
-
-// import { useState } from 'react';
-// import LandingIntro from './features/landing/LandingIntro';
-// import PersonalInfo from './features/personalInfo/PersonalInfo';
-// import CapturePhoto from './features/camera/CapturePhoto';
-// import Questionnaire from './features/questionnaire/Questionnaire';
-// import LoadingScreen from './features/recommendation/LoadingScreen';
-// // ADDED: import the new Recommendation page
 // import RecommendationPage from './features/recommendation/RecommendationPage';
 
 // function App() {
@@ -78,68 +15,75 @@
 //   const [personalInfo, setPersonalInfo] = useState(null);
 //   const [photo, setPhoto] = useState(null);
 //   const [answers, setAnswers] = useState(null);
+  
+//   // [ADDED]: Backend se aane wale real AI analysis result ko store karne ke liye state
+//   const [analysisResult, setAnalysisResult] = useState(null);
+
+//   // ==========================================
+//   // 🟢 SHOPIFY USER STATE (TEAMMATE ZONE)
+//   // ==========================================
+//   const [shopifyUser, setShopifyUser] = useState({
+//     firstName: '',
+//     customerId: ''
+//   });
+
+//   useEffect(() => {
+//     // 🚨 TEAMMATE INSTRUCTIONS:
+//     // Yahan par Shopify ka real data React mein inject karna hai (Liquid variables ya API Bridge se).
+//     // Example: setShopifyUser({ firstName: window.customerName, customerId: window.customerId });
+    
+//     // Abhi frontend testing ke liye dummy user set kiya gaya hai:
+//     setShopifyUser({
+//       firstName: 'Emma', // Teammate: Ise real Shopify dynamic first name se replace karein
+//       customerId: 'shop_123456789' // Teammate: Ise real Shopify Customer ID se replace karein
+//     });
+//   }, []);
 
 //   return (
 //     <>
 //       {/* 1. Landing Page */}
 //       {step === 'landing' && (
-//         // <LandingIntro onStartAssessment={() => setStep('personal-info')} />
-
-//         // Landing page to camera
 //         <LandingIntro onStartAssessment={() => setStep('camera')} />
 //       )}
 
-//       {/* 2. Personal Info Form (temporary disabled) */}
-//       {/* {step === 'personal-info' && (
-//         <PersonalInfo
-//           initialData={personalInfo}
-//           onPrevious={() => setStep('landing')}
-//           // CHANGES HERE: 'onNext' ko 'onSaved' kar diya hai taaki component ke prop se match ho sake
-//           onSaved={(data) => {
-//             setPersonalInfo(data); // User ka data save ho gaya
-//             setStep('camera');     // User ab camera section mein chala jayega
-//           }}
-//         />
-//       )} */}
-
-//       {/* 3. Camera / Photo Capture */}
+//      {/* 3. Camera / Photo Capture */}
 //       {step === 'camera' && (
 //         <CapturePhoto
-//           onSubmit={(imageDataUrl) => {
+//           // Teammate Note: Jab backend call mein customerId bhejna ho, toh 'shopifyUser.customerId' pass kar dena
+//           onSubmit={(imageDataUrl, sessionId, backendData) => {
 //             setPhoto(imageDataUrl);
-//             // setStep('questionnaire');
-//             // for sprint-1
+            
+//             console.log("App.jsx received backendData:", backendData);
+            
+//             if (backendData) {
+//               setAnalysisResult(backendData); // 👈 Real data yahan save ho gaya
+//             }
+            
 //             setStep('recommendation');
 //           }}
 //         />
 //       )}
 
-//       {/* 4. Questionnaire */}
-//       {/* {step === 'questionnaire' && (
-//         <Questionnaire
-//           onComplete={(collectedAnswers) => {
-//             setAnswers(collectedAnswers);
-//             // console.log('Personal Info:', personalInfo);
-//             console.log('Photo captured:', photo);
-//             console.log('Questionnaire answers:', collectedAnswers);
-//             setStep('loading');
-//           }}
+//       {/* 6. Recommendation Page */}
+//       {step === 'recommendation' && (
+//         <RecommendationPage 
+//           result={analysisResult} 
+//           // shopifyUser={shopifyUser} // Teammate Note: Agar backend se naam na aaye aur direct yahan se pass karna ho, toh isko uncomment kar lena.
 //         />
-//       )} */}
-
-//       {/* 5. Loading Screen */}
-//       {/* CHANGED: added onComplete so LoadingScreen can move the user forward
-//           into the recommendation page once its loading delay/animation finishes.
-//           If LoadingScreen doesn't currently call an onComplete prop internally,
-//           see the note below this code block for how to add it. */}
-//       {step === 'loading' && (
-//         <LoadingScreen onComplete={() => setStep('recommendation')} />
 //       )}
 
-//       {/* 6. Recommendation Page (ADDED) */}
-//       {/* Using dummy data for now — RecommendationPage defaults to DUMMY_RESULT
-//           when no `result` prop is passed, so this works as-is. */}
-//       {step === 'recommendation' && <RecommendationPage />}
+
+//       {/* for testing */}
+
+//       {/* 6. Recommendation Page */}
+//       {/* {step === 'recommendation' && (
+//         <RecommendationPage 
+//           result={{
+//             user_full_name: "Azad Ansari", // 👈 Yahan apna full name daalo
+//             primary_concerns: ["Testing Concern 1", "Testing Concern 2"] // Screen khali na dikhe isliye dummy concerns
+//           }} 
+//         />
+//       )} */}
 //     </>
 //   );
 // }
@@ -148,7 +92,14 @@
 
 
 
-import { useState } from 'react';
+
+// changes for shopify
+// pt-[140px] add karne se upar space mil jayegi
+{/* <div className="pt-[140px] min-h-screen"> 
+   {/* baaki components */}
+// </div> */}
+
+import { useState, useEffect } from 'react';
 import LandingIntro from './features/landing/LandingIntro';
 import PersonalInfo from './features/personalInfo/PersonalInfo';
 import CapturePhoto from './features/camera/CapturePhoto';
@@ -165,8 +116,30 @@ function App() {
   // [ADDED]: Backend se aane wale real AI analysis result ko store karne ke liye state
   const [analysisResult, setAnalysisResult] = useState(null);
 
+  // ==========================================
+  // 🟢 SHOPIFY USER STATE (TEAMMATE ZONE)
+  // ==========================================
+  const [shopifyUser, setShopifyUser] = useState({
+    firstName: '',
+    customerId: ''
+  });
+
+  useEffect(() => {
+    // 🚨 TEAMMATE INSTRUCTIONS:
+    // Yahan par Shopify ka real data React mein inject karna hai (Liquid variables ya API Bridge se).
+    // Example: setShopifyUser({ firstName: window.customerName, customerId: window.customerId });
+    
+    // Abhi frontend testing ke liye dummy user set kiya gaya hai:
+    setShopifyUser({
+      firstName: 'Emma', // Teammate: Ise real Shopify dynamic first name se replace karein
+      customerId: 'shop_123456789' // Teammate: Ise real Shopify Customer ID se replace karein
+    });
+  }, []);
+
   return (
-    <>
+    // 👇 YAHAN CHANGE KIYA HAI: Empty fragment <> ki jagah div lagaya aur usme classes daali hain
+    <div className="pt-[140px] min-h-screen">
+      
       {/* 1. Landing Page */}
       {step === 'landing' && (
         <LandingIntro onStartAssessment={() => setStep('camera')} />
@@ -175,6 +148,7 @@ function App() {
      {/* 3. Camera / Photo Capture */}
       {step === 'camera' && (
         <CapturePhoto
+          // Teammate Note: Jab backend call mein customerId bhejna ho, toh 'shopifyUser.customerId' pass kar dena
           onSubmit={(imageDataUrl, sessionId, backendData) => {
             setPhoto(imageDataUrl);
             
@@ -191,9 +165,27 @@ function App() {
 
       {/* 6. Recommendation Page */}
       {step === 'recommendation' && (
-        <RecommendationPage result={analysisResult} />
+        <RecommendationPage 
+          result={analysisResult} 
+          // shopifyUser={shopifyUser} // Teammate Note: Agar backend se naam na aaye aur direct yahan se pass karna ho, toh isko uncomment kar lena.
+        />
       )}
-    </>
+
+
+      {/* for testing */}
+
+      {/* 6. Recommendation Page */}
+      {/* {step === 'recommendation' && (
+        <RecommendationPage 
+          result={{
+            user_full_name: "Azad Ansari", // 👈 Yahan apna full name daalo
+            primary_concerns: ["Testing Concern 1", "Testing Concern 2"] // Screen khali na dikhe isliye dummy concerns
+          }} 
+        />
+      )} */}
+      
+    {/* 👇 YAHAN CHANGE KIYA HAI: Fragment closing </> ki jagah div close kiya hai */}
+    </div>
   );
 }
 
