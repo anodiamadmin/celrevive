@@ -138,7 +138,20 @@ function App() {
 
   return (
     // 👇 YAHAN CHANGE KIYA HAI: Empty fragment <> ki jagah div lagaya aur usme classes daali hain
-    <div className="pt-[140px] min-h-screen">
+    // <div className="pt-[140px] min-h-screen">
+
+    // new 
+    // <div className="min-h-screen">
+
+    //new new
+    // <div id="ai-skin-app" className="min-h-screen">
+
+    // new new new for main body in shopify
+    // Pehle ye tha: 
+    // <div id="ai-skin-app" className="min-h-screen">
+
+    // Ab isko aisa kardo (pt-[120px] ya pt-[140px] lagao):
+    <div id="ai-skin-app" className="pt-[120px] min-h-screen">
       
       {/* 1. Landing Page */}
       {step === 'landing' && (
