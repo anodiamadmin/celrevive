@@ -33,7 +33,7 @@
 export default {
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   corePlugins: { preflight: false },
-  important: '#ai-skin-app', // 👈 Yahan '#root' ki jagah ye naya ID likho
+  important: '#ai-skin-assessment', // 👈 Yahan '#root' ki jagah ye naya ID likho
   theme: { extend: {} },
   plugins: [],
 }

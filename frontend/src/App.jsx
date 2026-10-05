@@ -151,7 +151,7 @@ function App() {
     // <div id="ai-skin-app" className="min-h-screen">
 
     // Ab isko aisa kardo (pt-[120px] ya pt-[140px] lagao):
-    <div id="ai-skin-app" className="pt-[120px] min-h-screen">
+    <div id="ai-skin-assessment" className="pt-[120px] min-h-screen">
       
       {/* 1. Landing Page */}
       {step === 'landing' && (

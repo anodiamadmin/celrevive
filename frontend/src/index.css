@@ -150,9 +150,9 @@ code {
   }
 }
 
-/* 👇 YAHAN SE SAB KUCH #ai-skin-app KE ANDAR LOCK KAR DIYA HAI 👇 */
+/* 👇 YAHAN SE SAB KUCH #ai-skin-assessment KE ANDAR LOCK KAR DIYA HAI 👇 */
 
-#ai-skin-app {
+#ai-skin-assessment {
   /* Global page styles jo root pe the, wo ab sirf app pe lagenge */
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
@@ -170,58 +170,58 @@ code {
   box-sizing: border-box;
 }
 
-#ai-skin-app h1,
-#ai-skin-app h2 {
+#ai-skin-assessment h1,
+#ai-skin-assessment h2 {
   font-family: var(--heading);
   font-weight: 500;
   color: var(--text-h);
 }
 
-#ai-skin-app h1 {
+#ai-skin-assessment h1 {
   font-size: 56px;
   letter-spacing: -1.68px;
   margin: 32px 0;
 }
 
-#ai-skin-app h2 {
+#ai-skin-assessment h2 {
   font-size: 24px;
   line-height: 118%;
   letter-spacing: -0.24px;
   margin: 0 0 8px;
 }
 
-#ai-skin-app p {
+#ai-skin-assessment p {
   margin: 0;
 }
 
-#ai-skin-app code,
-#ai-skin-app .counter {
+#ai-skin-assessment code,
+#ai-skin-assessment .counter {
   font-family: var(--mono);
   display: inline-flex;
   border-radius: 4px;
   color: var(--text-h);
 }
 
-#ai-skin-app code {
+#ai-skin-assessment code {
   font-size: 15px;
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
 }
 
-#ai-skin-app #social .button-icon {
+#ai-skin-assessment #social .button-icon {
   filter: invert(1) brightness(2);
 }
 
 @media (max-width: 1024px) {
-  #ai-skin-app {
+  #ai-skin-assessment {
     font-size: 16px;
   }
-  #ai-skin-app h1 {
+  #ai-skin-assessment h1 {
     font-size: 36px;
     margin: 20px 0;
   }
-  #ai-skin-app h2 {
+  #ai-skin-assessment h2 {
     font-size: 20px;
   }
 }
@@ -229,24 +229,24 @@ code {
 /* new new new for main body in shopify */
 /* 👇 Ye code index.css mein sabse niche add karna hai 👇 */
 
-#ai-skin-app *,
-#ai-skin-app ::before,
-#ai-skin-app ::after {
+#ai-skin-assessment *,
+#ai-skin-assessment ::before,
+#ai-skin-assessment ::after {
   box-sizing: border-box;
   border-width: 0;
   border-style: solid;
   border-color: #e5e7eb;
 }
 
-#ai-skin-app img,
-#ai-skin-app svg,
-#ai-skin-app video {
+#ai-skin-assessment img,
+#ai-skin-assessment svg,
+#ai-skin-assessment video {
   max-width: 100%;
   height: auto;
   display: block;
 }
 
-#ai-skin-app button {
+#ai-skin-assessment button {
   cursor: pointer;
   background-color: transparent;
   background-image: none;
