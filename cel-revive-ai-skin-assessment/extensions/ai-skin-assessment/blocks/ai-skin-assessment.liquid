@@ -1,0 +1,32 @@
+{% if customer %}
+  <!-- The mounting div for the React application -->
+  <div 
+    id="ai-skin-assessment" 
+    data-customer-id="{{ customer.id }}" 
+    data-customer-name="{{ customer.first_name }}"
+  ></div>
+
+  <!-- Load the compiled React assets from the Extension -->
+  {{ 'main.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'main.js' | asset_url }}" defer="defer"></script>
+
+{% else %}
+  <!-- Gated Login UI (Only visible to logged-out users) -->
+  <div style="max-width: 600px; margin: 4rem auto; padding: 3rem 2rem; text-align: center; background-color: #faf9f6; border: 1px solid #dcd6cd; border-radius: 12px; font-family: sans-serif;">
+    <h2 style="font-size: 1.8rem; font-weight: 600; color: #111; margin-bottom: 1rem;">Sign In Required</h2>
+    <p style="font-size: 1rem; color: #666; margin-bottom: 2rem; line-height: 1.5;">
+      Please sign in or create an account to access your personalized AI Skin Assessment and skincare recommendation.
+    </p>
+    <a href="{{ routes.account_login_url }}" style="display: inline-block; background-color: #000; color: #fff; padding: 1rem 2.5rem; font-size: 0.875rem; font-weight: bold; letter-spacing: 2px; text-decoration: none; text-transform: uppercase;">
+      Sign In to Continue
+    </a>
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "AI Skin Assessment",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}
