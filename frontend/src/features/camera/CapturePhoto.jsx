@@ -96,9 +96,7 @@ export default function CapturePhoto({ onSubmit }) {
       }
     } catch (err) {
       console.error('Camera access failed:', err);
-      setCameraError(
-        'Camera access nahi mil paya. Gallery se photo select kar lo.'
-      );
+      setCameraError('Camera access denied. Please select a photo from your gallery.');
       fileInputRef.current?.click();
     }
   };
@@ -359,26 +357,20 @@ export default function CapturePhoto({ onSubmit }) {
       const customerName = widgetRoot?.dataset?.customerName || 'Customer';
       const apiUrl = `/apps/celrevive-backend/api/v1/image-analysis?user_full_name=${encodeURIComponent(customerName)}`;
 
-      console.log("Sending Request to Proxy:", apiUrl); 
-
       const res = await fetch(apiUrl, {
         method: 'POST',
         body: formData,
       });
 
-      console.log("Response Status:", res.status);
       if (!res.ok) {
         throw new Error(`Server returned status ${res.status}`);
       }
 
       const data = await res.json();
-      console.log("Parsed Data:", data);
-
       return { isValid: true, sessionId, backendData: data };
       
     } catch (error) {
       console.error('CRASH REASON:', error);
-      
       setValidationError(`Error: ${error.message}`);
       setCapturedImage(null);
       setStage('idle');
@@ -390,9 +382,7 @@ export default function CapturePhoto({ onSubmit }) {
 
   const submitPhoto = async () => {
     if (!capturedImage || isValidating) return;
-
     const result = await validateImage(capturedImage);
-
     if (result.isValid) {
       onSubmit?.(capturedImage, result.sessionId, result.backendData);
     }
@@ -400,14 +390,8 @@ export default function CapturePhoto({ onSubmit }) {
 
   const getCursor = (dir) => {
     const map = {
-      n: 'n-resize',
-      s: 's-resize',
-      e: 'e-resize',
-      w: 'w-resize',
-      ne: 'ne-resize',
-      nw: 'nw-resize',
-      se: 'se-resize',
-      sw: 'sw-resize',
+      n: 'n-resize', s: 's-resize', e: 'e-resize', w: 'w-resize',
+      ne: 'ne-resize', nw: 'nw-resize', se: 'se-resize', sw: 'sw-resize',
     };
     return map[dir] || 'pointer';
   };
@@ -474,7 +458,7 @@ export default function CapturePhoto({ onSubmit }) {
               <button
                 type="button"
                 onClick={() => openCamera(facingMode)}
-                className="flex h-11 w-full max-w-sm items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                className="flex h-11 w-full max-w-sm items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
               >
                 <Camera className="h-4 w-4" strokeWidth={2} />
                 Take a photo
@@ -509,7 +493,7 @@ export default function CapturePhoto({ onSubmit }) {
 
       <div className="w-full px-4 pb-10">
         <div className="mx-auto flex max-w-3xl gap-3 rounded-xl border border-[var(--border)] p-5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent)]">
             <Info className="h-4 w-4" strokeWidth={2} />
           </div>
 
@@ -529,13 +513,13 @@ export default function CapturePhoto({ onSubmit }) {
       </div>
 
       {stage === 'camera' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
           <div className="relative w-full max-w-md overflow-hidden rounded-xl bg-black">
             <button
               type="button"
               onClick={closeCamera}
               aria-label="Close camera"
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
             >
               <X className="h-5 w-5" />
             </button>
@@ -580,7 +564,7 @@ export default function CapturePhoto({ onSubmit }) {
                   className={`flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-white transition-all duration-200 ${
                     isFlipping
                       ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:bg-white/30 hover:scale-110 active:scale-95'
+                      : 'hover:scale-110 hover:bg-white/30 active:scale-95'
                   }`}
                 >
                   <RefreshCw
@@ -595,8 +579,8 @@ export default function CapturePhoto({ onSubmit }) {
       )}
 
       {stage === 'crop' && capturedImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-xl bg-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-xl bg-[var(--bg)]">
             <div
               ref={cropContainerRef}
               className="relative aspect-[3/4] w-full touch-none select-none overflow-hidden bg-black"
@@ -606,7 +590,6 @@ export default function CapturePhoto({ onSubmit }) {
                 ref={cropImageRef}
                 src={capturedImage}
                 alt="Crop preview"
-                /* [UPDATED]: object-contain lagaya gaya */
                 className="pointer-events-none block h-full w-full object-contain"
                 draggable={false}
               />
@@ -624,19 +607,19 @@ export default function CapturePhoto({ onSubmit }) {
               >
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'nw')}
-                  className="absolute -top-2 -left-2 h-5 w-5 cursor-nw-resize rounded-full border-2 border-[var(--text-h)] bg-white"
+                  className="absolute -left-2 -top-2 h-5 w-5 cursor-nw-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'ne')}
-                  className="absolute -top-2 -right-2 h-5 w-5 cursor-ne-resize rounded-full border-2 border-[var(--text-h)] bg-white"
+                  className="absolute -right-2 -top-2 h-5 w-5 cursor-ne-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'sw')}
-                  className="absolute -bottom-2 -left-2 h-5 w-5 cursor-sw-resize rounded-full border-2 border-[var(--text-h)] bg-white"
+                  className="absolute -bottom-2 -left-2 h-5 w-5 cursor-sw-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'se')}
-                  className="absolute -bottom-2 -right-2 h-5 w-5 cursor-se-resize rounded-full border-2 border-[var(--text-h)] bg-white"
+                  className="absolute -bottom-2 -right-2 h-5 w-5 cursor-se-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
 
                 <div
@@ -646,7 +629,7 @@ export default function CapturePhoto({ onSubmit }) {
                     left: '50%',
                     transform: 'translateX(-50%)',
                   }}
-                  className="absolute -top-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-white"
+                  className="absolute -top-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 's')}
@@ -655,7 +638,7 @@ export default function CapturePhoto({ onSubmit }) {
                     left: '50%',
                     transform: 'translateX(-50%)',
                   }}
-                  className="absolute -bottom-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-white"
+                  className="absolute -bottom-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'w')}
@@ -664,7 +647,7 @@ export default function CapturePhoto({ onSubmit }) {
                     top: '50%',
                     transform: 'translateY(-50%)',
                   }}
-                  className="absolute -left-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-white"
+                  className="absolute -left-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'e')}
@@ -673,7 +656,7 @@ export default function CapturePhoto({ onSubmit }) {
                     top: '50%',
                     transform: 'translateY(-50%)',
                   }}
-                  className="absolute -right-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-white"
+                  className="absolute -right-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
               </div>
             </div>
@@ -692,7 +675,7 @@ export default function CapturePhoto({ onSubmit }) {
                 type="button"
                 onClick={confirmCrop}
                 aria-label="Confirm crop"
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--text-h)] text-white hover:opacity-90"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--text-h)] text-[var(--bg)] hover:opacity-90"
               >
                 <Check className="h-5 w-5" />
               </button>
@@ -702,8 +685,8 @@ export default function CapturePhoto({ onSubmit }) {
       )}
 
       {stage === 'preview' && capturedImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-xl bg-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-xl bg-[var(--bg)]">
             <img
               src={capturedImage}
               alt="Captured skin area preview"
@@ -725,7 +708,7 @@ export default function CapturePhoto({ onSubmit }) {
                 type="button"
                 onClick={submitPhoto}
                 disabled={isValidating}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] py-3 font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] py-3 font-semibold text-[var(--bg)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isValidating ? (
                   <>
