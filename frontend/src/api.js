@@ -31,7 +31,6 @@ export const fetchAIRecommendation = async (sessionId, userName = 'Valued Custom
       }
     } catch (err) {
       console.error('Fetch attempt failed:', err);
-      // Agar retries khatam ho chuke hain tabhi error throw karein, warna next retry chalne dein
       if (retries <= 1) {
         throw err;
       }

@@ -7,16 +7,6 @@ const PinIcon = () => (
   </svg>
 );
 
-/**
- * PersonalInfo — "Information Overview" step.
- * Sits between the landing/begin-assessment page and the camera step:
- *   begin assessment -> personal info (this page) -> camera -> questionnaire
- *
- * Wire-up (react-router example):
- *   <Route path="/personal-info" element={
- *     <PersonalInfo onSaved={(data) => { saveAnswers(data); navigate('/camera'); }} />
- *   } />
- */
 export default function PersonalInfo({ initialData, onSaved }) {
   const [gender, setGender] = useState(initialData?.gender || '');
   const [dob, setDob] = useState(initialData?.dob || '');

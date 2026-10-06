@@ -20,7 +20,7 @@ use_legacy_install_flow = false
 redirect_urls = [ ]
 
 [app_proxy]
-url = "https://nosogenetic-gaynelle-tonnishly.ngrok-free.dev/api/v1/celrevive-backend"
+url = "https://nosogenetic-gaynelle-tonnishly.ngrok-free.dev/"
 subpath = "celrevive-backend"
 prefix = "apps"
 

@@ -1,5 +1,3 @@
-
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Camera,
@@ -24,7 +22,6 @@ const TRUST_ITEMS = [
   { icon: Bot, label: 'AI-powered accuracy' },
 ];
 
-// [UPDATED]: By default pura image select hoga
 const DEFAULT_CROP_BOX = { x: 0, y: 0, w: 100, h: 100 };
 const MIN_CROP_SIZE_PERCENT = 15;
 
@@ -349,66 +346,21 @@ export default function CapturePhoto({ onSubmit }) {
     try {
       const imageFile = dataURLtoFile(imageData, 'selfie.jpg');
       const formData = new FormData();
-      
-      // ==========================================
-      // 🟢 SESSION ID LOGIC (MANUAL vs DYNAMIC)
-      // ==========================================
-      
-      // Option 1: Hardcoded ID (Testing ke liye jo aapne pehle define kiya tha)
-      const manualSessionId = "5581e1d0-4e59-448c-b5a3-1187c05c2365"; 
-      
-      // Option 2: Automatic Dynamic ID (Har baar naya ID generate karega)
-      const dynamicSessionId = crypto.randomUUID(); 
-
-      // 👇 Yahan aap decide kar sakte ho ki konsa ID use karna hai.
-      // Abhi dynamic wala active rakha hai (naya ID generate hoga har baar).
-      
-      // const sessionId = manualSessionId; // 👈 Isko uncomment karoge toh Purana wala chalega
-      // const sessionId = dynamicSessionId;   // 👈 Isko uncomment karoge toh Automatic Naya chalega
-
-      // console.log("Sending Photo with Session ID:", sessionId);
-
-      // formData.append('image', imageFile);
-      // formData.append('session_id', sessionId);
-
-
-      // ==========================================
-      // 🟢 SESSION ID LOGIC (FETCH FROM STORAGE)
-      // ==========================================
-      // Ab hum hardcoded ya naya random ID nahi banayenge, 
-      // seedha memory se wo ID uthayenge jo LandingIntro ne save kiya tha.
-      
       const sessionId = sessionStorage.getItem('session_id');
 
       if (!sessionId) {
         throw new Error("Session ID missing! Please start from the beginning.");
       }
 
-      console.log("Sending Photo with Session ID:", sessionId);
-
       formData.append('image', imageFile);
       formData.append('session_id', sessionId);
 
-      // const res = await fetch('http://localhost:8000/api/v1/image-analysis', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
+      const widgetRoot = document.getElementById('ai-skin-assessment');
+      const customerName = widgetRoot?.dataset?.customerName || 'Customer';
+      const apiUrl = `/apps/celrevive-backend/api/v1/image-analysis?user_full_name=${encodeURIComponent(customerName)}`;
 
-      // console.log("Response Status:", res.status);
+      console.log("Sending Request to Proxy:", apiUrl); 
 
-      // ==========================================
-      // 🟢 API URL LOGIC (Local vs Live)
-      // ==========================================
-      // import.meta.env.VITE_API_URL frontend ki .env file se URL uthayega.
-      // Agar .env file nahi milti (ya teammate ne setup nahi ki), toh yeh 
-      // fallback (||) ke taur par automatically 'http://localhost:8000' le lega 
-      // taaki app crash na ho aur local par chalti rahe.
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const apiUrl = `${baseUrl}/api/v1/image-analysis`;
-
-      console.log("Sending Request to:", apiUrl); // Check karne ke liye ki URL kya ban raha hai
-
-      // Ab direct hardcoded URL ki jagah hum dynamic 'apiUrl' use kar rahe hain
       const res = await fetch(apiUrl, {
         method: 'POST',
         body: formData,
@@ -755,7 +707,6 @@ export default function CapturePhoto({ onSubmit }) {
             <img
               src={capturedImage}
               alt="Captured skin area preview"
-              /* [UPDATED]: object-contain lagaya gaya */
               className="max-h-[60vh] w-full object-contain"
             />
 
