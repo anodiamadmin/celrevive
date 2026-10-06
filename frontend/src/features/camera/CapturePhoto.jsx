@@ -363,8 +363,26 @@ export default function CapturePhoto({ onSubmit }) {
       // 👇 Yahan aap decide kar sakte ho ki konsa ID use karna hai.
       // Abhi dynamic wala active rakha hai (naya ID generate hoga har baar).
       
-      const sessionId = manualSessionId; // 👈 Isko uncomment karoge toh Purana wala chalega
+      // const sessionId = manualSessionId; // 👈 Isko uncomment karoge toh Purana wala chalega
       // const sessionId = dynamicSessionId;   // 👈 Isko uncomment karoge toh Automatic Naya chalega
+
+      // console.log("Sending Photo with Session ID:", sessionId);
+
+      // formData.append('image', imageFile);
+      // formData.append('session_id', sessionId);
+
+
+      // ==========================================
+      // 🟢 SESSION ID LOGIC (FETCH FROM STORAGE)
+      // ==========================================
+      // Ab hum hardcoded ya naya random ID nahi banayenge, 
+      // seedha memory se wo ID uthayenge jo LandingIntro ne save kiya tha.
+      
+      const sessionId = sessionStorage.getItem('session_id');
+
+      if (!sessionId) {
+        throw new Error("Session ID missing! Please start from the beginning.");
+      }
 
       console.log("Sending Photo with Session ID:", sessionId);
 
