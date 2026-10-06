@@ -249,7 +249,6 @@ function App() {
   }, []);
 
   return (
-<<<<<<< Updated upstream
     // 👇 YAHAN CHANGE KIYA HAI: Empty fragment <> ki jagah div lagaya aur usme classes daali hain
     // <div className="pt-[140px] min-h-screen">
 
@@ -265,9 +264,6 @@ function App() {
 
     // Ab isko aisa kardo (pt-[120px] ya pt-[140px] lagao):
     <div id="ai-skin-assessment" className="pt-[120px] min-h-screen">
-=======
-    <div id="ai-skin-app" className="pt-[120px] min-h-screen">
->>>>>>> Stashed changes
       
       {/* 1. Landing Page */}
       {step === 'landing' && (
