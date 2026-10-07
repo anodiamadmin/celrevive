@@ -1,16 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useImageCapture } from '../../hooks/useImageCapture';
 import {
-  Camera,
-  ShieldKeyhole,
-  MonitorSmartphone,
-  BriefcaseMedical,
-  Bot,
-  Info,
-  X,
-  RotateCcw,
-  Check,
-  Image as ImageIcon,
-  RefreshCw,
+  Camera, ShieldKeyhole, MonitorSmartphone, BriefcaseMedical, Bot,
+  Info, X, RotateCcw, Check, Image as ImageIcon, RefreshCw,
 } from 'lucide-react';
 import localScanDevicePhoto from '../../assets/scan-device.png';
 import localSelfieCapturePhoto from '../../assets/selfie-capture.png';
@@ -22,325 +14,34 @@ const TRUST_ITEMS = [
   { icon: Bot, label: 'AI-powered accuracy' },
 ];
 
-const DEFAULT_CROP_BOX = { x: 0, y: 0, w: 100, h: 100 };
-const MIN_CROP_SIZE_PERCENT = 15;
-
 function dataURLtoFile(dataurl, filename) {
   let arr = dataurl.split(','),
       mime = arr[0].match(/:(.*?);/)[1],
       bstr = atob(arr[arr.length - 1]), 
       n = bstr.length, 
       u8arr = new Uint8Array(n);
-  while(n--){
-      u8arr[n] = bstr.charCodeAt(n);
-  }
+  while(n--){ u8arr[n] = bstr.charCodeAt(n); }
   return new File([u8arr], filename, {type:mime});
 }
 
 export default function CapturePhoto({ onSubmit }) {
-  // Extract the Shopify CDN image URLs, falling back to local imports for localhost dev
-  const widgetRoot = document.getElementById('ai-skin-assessment');
-  const scanDeviceImg = widgetRoot?.dataset?.scanDeviceImg || localScanDevicePhoto;
-  const selfieCaptureImg = widgetRoot?.dataset?.selfieCaptureImg || localSelfieCapturePhoto;
-
-  const [stage, setStage] = useState('idle');
-  const [capturedImage, setCapturedImage] = useState(null);
-  const [cameraError, setCameraError] = useState('');
+  const {
+    stage, setStage, capturedImage, setCapturedImage,
+    cameraError, isOpeningCamera, facingMode, isFlipping, cropBox,
+    videoRef, canvasRef, fileInputRef, galleryInputRef, cropContainerRef, cropImageRef,
+    openCamera, closeCamera, flipCamera, capturePhoto, handleFileSelect, openGallery, handleGallerySelect,
+    cancelCrop, retake, confirmCrop, handleCropDragStart, handleCropResizeStart
+  } = useImageCapture();
 
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState('');
 
-  const [isOpeningCamera, setIsOpeningCamera] = useState(false);
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const baseUrl = isLocalhost ? 'http://localhost:8000' : '/apps/celrevive-backend';
 
-  const [facingMode, setFacingMode] = useState('environment');
-  const [isFlipping, setIsFlipping] = useState(false);
-
-  const [cropBox, setCropBox] = useState(DEFAULT_CROP_BOX);
-
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const streamRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const galleryInputRef = useRef(null);
-
-  const cropContainerRef = useRef(null);
-  const cropImageRef = useRef(null);
-  const dragStateRef = useRef(null);
-
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop();
-      });
-      streamRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => stopCamera, [stopCamera]);
-
-  useEffect(() => {
-    if (stage === 'crop') {
-      setCropBox(DEFAULT_CROP_BOX);
-    }
-  }, [stage]);
-
-  const openCamera = async (targetFacingMode = facingMode) => {
-    setCameraError('');
-    stopCamera();
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: targetFacingMode },
-        audio: false,
-      });
-      streamRef.current = stream;
-      setStage('camera');
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
-      }
-    } catch (err) {
-      console.error('Camera access failed:', err);
-      setCameraError('Camera access denied. Please select a photo from your gallery.');
-      fileInputRef.current?.click();
-    }
-  };
-
-  const flipCamera = async () => {
-    if (isFlipping) return;
-    setIsFlipping(true);
-
-    const nextFacingMode = facingMode === 'environment' ? 'user' : 'environment';
-    stopCamera();
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: nextFacingMode },
-        audio: false,
-      });
-
-      streamRef.current = stream;
-      setFacingMode(nextFacingMode);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
-      }
-    } catch (err) {
-      console.error('Camera flip error:', err);
-    } finally {
-      setIsFlipping(false);
-    }
-  };
-
-  useEffect(() => {
-    if (stage === 'camera' && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(() => {});
-    }
-  }, [stage]);
-
-  const capturePhoto = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    setCapturedImage(dataUrl);
-    stopCamera();
-    setStage('crop');
-  };
-
-  const closeCamera = () => {
-    stopCamera();
-    setStage('idle');
-  };
-
-  const handleFileSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCapturedImage(reader.result);
-      setStage('crop');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const openGallery = () => {
-    stopCamera();
-    galleryInputRef.current?.click();
-  };
-
-  const handleGallerySelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCapturedImage(reader.result);
-      setStage('crop');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const cancelCrop = () => {
-    setCapturedImage(null);
-    stopCamera();
-    setStage('idle');
-  };
-
-  const retake = async () => {
-    if (isOpeningCamera || isValidating) return;
-
-    setIsOpeningCamera(true);
-
-    try {
-      setCapturedImage(null);
-      setValidationError('');
-      await openCamera(facingMode);
-    } finally {
-      setIsOpeningCamera(false); 
-    }
-  };
-
-  const handleCropPointerMove = (e) => {
-    const state = dragStateRef.current;
-    if (!state) return;
-
-    const dxPercent = ((e.clientX - state.startX) / state.rectWidth) * 100;
-    const dyPercent = ((e.clientY - state.startY) / state.rectHeight) * 100;
-
-    if (state.mode === 'move') {
-      let newX = state.startBox.x + dxPercent;
-      let newY = state.startBox.y + dyPercent;
-      newX = Math.min(Math.max(newX, 0), 100 - state.startBox.w);
-      newY = Math.min(Math.max(newY, 0), 100 - state.startBox.h);
-      setCropBox((prev) => ({ ...prev, x: newX, y: newY }));
-
-    } else if (state.mode === 'resize') {
-      let { x, y, w, h } = state.startBox;
-
-      if (state.dir.includes('e')) {
-        w = Math.min(Math.max(w + dxPercent, MIN_CROP_SIZE_PERCENT), 100 - x);
-      }
-      if (state.dir.includes('s')) {
-        h = Math.min(Math.max(h + dyPercent, MIN_CROP_SIZE_PERCENT), 100 - y);
-      }
-      if (state.dir.includes('w')) {
-        const newX = Math.min(Math.max(x + dxPercent, 0), x + w - MIN_CROP_SIZE_PERCENT);
-        w = w + (x - newX);
-        x = newX;
-      }
-      if (state.dir.includes('n')) {
-        const newY = Math.min(Math.max(y + dyPercent, 0), y + h - MIN_CROP_SIZE_PERCENT);
-        h = h + (y - newY);
-        y = newY;
-      }
-
-      setCropBox({ x, y, w, h });
-    }
-  };
-
-  const handleCropPointerUp = () => {
-    dragStateRef.current = null;
-    window.removeEventListener('pointermove', handleCropPointerMove);
-    window.removeEventListener('pointerup', handleCropPointerUp);
-  };
-
-  const handleCropDragStart = (e) => {
-    e.stopPropagation();
-    const container = cropContainerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    dragStateRef.current = {
-      mode: 'move',
-      startX: e.clientX,
-      startY: e.clientY,
-      startBox: { ...cropBox },
-      rectWidth: rect.width,
-      rectHeight: rect.height,
-    };
-    window.addEventListener('pointermove', handleCropPointerMove);
-    window.addEventListener('pointerup', handleCropPointerUp);
-  };
-
-  const handleCropResizeStart = (e, dir) => {
-    e.stopPropagation();
-    const container = cropContainerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    dragStateRef.current = {
-      mode: 'resize',
-      dir,
-      startX: e.clientX,
-      startY: e.clientY,
-      startBox: { ...cropBox },
-      rectWidth: rect.width,
-      rectHeight: rect.height,
-    };
-    window.addEventListener('pointermove', handleCropPointerMove);
-    window.addEventListener('pointerup', handleCropPointerUp);
-  };
-
-  const confirmCrop = () => {
-    if (cropBox.x === 0 && cropBox.y === 0 && cropBox.w === 100 && cropBox.h === 100) {
-      setStage('preview');
-      return; 
-    }
-
-    const container = cropContainerRef.current;
-    const imgEl = cropImageRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !imgEl || !canvas) return;
-
-    const containerW = container.clientWidth;
-    const containerH = container.clientHeight;
-    const naturalW = imgEl.naturalWidth;
-    const naturalH = imgEl.naturalHeight;
-
-    const scale = Math.min(containerW / naturalW, containerH / naturalH);
-    const scaledW = naturalW * scale;
-    const scaledH = naturalH * scale;
-    const offsetX = (containerW - scaledW) / 2;
-    const offsetY = (containerH - scaledH) / 2;
-
-    const containerCropX = (cropBox.x / 100) * containerW;
-    const containerCropY = (cropBox.y / 100) * containerH;
-    const containerCropW = (cropBox.w / 100) * containerW;
-    const containerCropH = (cropBox.h / 100) * containerH;
-
-    const naturalCropX = (containerCropX - offsetX) / scale;
-    const naturalCropY = (containerCropY - offsetY) / scale;
-    const naturalCropW = containerCropW / scale;
-    const naturalCropH = containerCropH / scale;
-
-    canvas.width = naturalCropW;
-    canvas.height = naturalCropH;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(
-      imgEl,
-      naturalCropX,
-      naturalCropY,
-      naturalCropW,
-      naturalCropH,
-      0,
-      0,
-      naturalCropW,
-      naturalCropH
-    );
-
-    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    setCapturedImage(croppedDataUrl);
-    setStage('preview');
-  };
+  const widgetRoot = document.getElementById('ai-skin-assessment');
+  const scanDeviceImg = widgetRoot?.dataset?.scanDeviceImg || localScanDevicePhoto;
+  const selfieCaptureImg = widgetRoot?.dataset?.selfieCaptureImg || localSelfieCapturePhoto;
 
   const validateImage = async (imageData) => {
     setIsValidating(true);
@@ -349,33 +50,19 @@ export default function CapturePhoto({ onSubmit }) {
     try {
       const imageFile = dataURLtoFile(imageData, 'selfie.jpg');
       const formData = new FormData();
-      const sessionId = sessionStorage.getItem('session_id');
-
-      if (!sessionId) {
-        throw new Error("Session ID missing! Please start from the beginning.");
-      }
+      
+      // Dynamic session ID generated per upload to support atomic API architecture[cite: 8]
+      const sessionId = crypto.randomUUID(); 
 
       formData.append('image', imageFile);
       formData.append('session_id', sessionId);
 
-      // Check if running on local Vite server
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-      // Route to local FastAPI on localhost, or Shopify App Proxy in production
-      const baseUrl = isLocalhost ? 'http://localhost:8000' : '/apps/celrevive-backend';
-
-      const widgetRoot = document.getElementById('ai-skin-assessment');
       const customerName = widgetRoot?.dataset?.customerName || 'Customer';
       const apiUrl = `${baseUrl}/api/v1/image-analysis?user_full_name=${encodeURIComponent(customerName)}`;
 
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        body: formData,
-      });
+      const res = await fetch(apiUrl, { method: 'POST', body: formData });
 
-      if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Server returned status ${res.status}`);
 
       const data = await res.json();
       return { isValid: true, sessionId, backendData: data };
@@ -394,63 +81,38 @@ export default function CapturePhoto({ onSubmit }) {
   const submitPhoto = async () => {
     if (!capturedImage || isValidating) return;
     const result = await validateImage(capturedImage);
-    if (result.isValid) {
-      onSubmit?.(capturedImage, result.sessionId, result.backendData);
-    }
+    if (result.isValid) onSubmit?.(capturedImage, result.sessionId, result.backendData);
   };
 
   return (
     <div className="flex w-full flex-col bg-[var(--bg)]">
       <div className="flex w-full shrink-0 flex-col items-center justify-center px-4 py-5">
+        
+        <div className="mb-4 w-full text-center">
+          <h1 className="m-0 text-[20px] font-bold leading-tight text-[var(--text-h)] sm:text-[24px] md:text-[28px]">
+            Capture a Photo of Your Affected Skin Area or Take a Selfie!
+          </h1>
+          {validationError && <p className="mt-2 text-[14px] font-medium text-red-500">{validationError}</p>}
+          <div className="mx-auto mt-2 block h-[2px] w-[56px] bg-[var(--text-h)]" />
+        </div>
+
         <div className="w-full max-w-[768px]">
-          <div className="mb-4 text-center">
-            <h1 className="m-0 text-[20px] font-bold leading-tight text-[var(--text-h)] sm:text-[24px] md:text-[28px]">
-              Capture a Photo of Your Affected Skin Area or Take a Selfie!
-            </h1>
-
-            {validationError && (
-              <p className="mt-2 text-[14px] font-medium text-red-500">
-                {validationError}
-              </p>
-            )}
-
-            <div className="mx-auto mt-2 h-[2px] w-[56px] bg-[var(--text-h)]" />
-          </div>
-
           <div className="rounded-xl border border-[var(--border)] p-3 md:p-4">
             <div className="grid grid-cols-2 gap-3 overflow-hidden rounded-lg">
               <div className="h-[224px] overflow-hidden rounded-lg bg-[var(--code-bg)] sm:h-[256px] md:h-[288px]">
-                <img
-                  src={scanDeviceImg}
-                  alt="Scanning a skin spot with a phone camera"
-                  className="h-full w-full object-cover"
-                />
+                <img src={scanDeviceImg} alt="Scanning skin" className="h-full w-full object-cover" />
               </div>
-
               <div className="h-[224px] overflow-hidden rounded-lg bg-[var(--code-bg)] sm:h-[256px] md:h-[288px]">
-                <img
-                  src={selfieCaptureImg}
-                  alt="Taking a selfie for skin analysis"
-                  className="h-full w-full object-cover"
-                />
+                <img src={selfieCaptureImg} alt="Taking selfie" className="h-full w-full object-cover" />
               </div>
             </div>
 
             <div className="mt-3 text-center">
-              <p className="text-[11px] font-bold tracking-widest text-[var(--text-h)]">
-                WHY USERS TRUST US:
-              </p>
-
-              <div className="mx-auto mt-3 grid max-w-[448px] grid-cols-2 gap-x-[40px] gap-y-2">
+              <p className="text-[11px] font-bold tracking-widest text-[var(--text-h)]">WHY USERS TRUST US:</p>
+              <div className="mx-auto mt-3 grid max-w-[448px] grid-cols-2 gap-x-[40px] gap-y-2 whitespace-nowrap">
                 {TRUST_ITEMS.map(({ icon: Icon, label }) => (
-                  <div
-                    key={label}
-                    className="flex items-center gap-2 text-[14px] text-[var(--text)]"
-                  >
-                    <Icon
-                      className="h-4 w-4 shrink-0 text-[var(--text-h)]"
-                      strokeWidth={1.75}
-                    />
+                  <div key={label} className="flex items-center gap-2 text-[14px] text-[var(--text)]">
+                    <Icon className="h-[16px] w-[16px] shrink-0 text-[var(--text-h)]" strokeWidth={1.75} />
                     <span>{label}</span>
                   </div>
                 ))}
@@ -463,53 +125,27 @@ export default function CapturePhoto({ onSubmit }) {
                 onClick={() => openCamera(facingMode)}
                 className="flex h-[44px] w-full max-w-[384px] items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] text-[14px] font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
               >
-                <Camera className="h-4 w-4" strokeWidth={2} />
-                Take a photo
+                <Camera className="h-[16px] w-[16px]" strokeWidth={2} /> Take a photo
               </button>
             </div>
 
-            {cameraError && (
-              <p className="mt-2 text-center text-[12px] text-red-500">
-                {cameraError}
-              </p>
-            )}
+            {cameraError && <p className="mt-2 text-center text-[12px] text-red-500">{cameraError}</p>}
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleGallerySelect}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
+            <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleGallerySelect} />
           </div>
         </div>
       </div>
 
       <div className="w-full px-4 pb-10">
-        <div className="mx-auto flex max-w-[768px] gap-3 rounded-xl border border-[var(--border)] p-5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent)]">
-            <Info className="h-4 w-4" strokeWidth={2} />
+        <div className="mx-auto flex w-full max-w-[768px] gap-3 rounded-xl border border-[var(--border)] p-5">
+          <div className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent)]">
+            <Info className="h-[16px] w-[16px]" strokeWidth={2} />
           </div>
-
           <div>
-            <p className="text-[14px] font-semibold text-[var(--text-h)]">
-              TIP FOR ACCURACY
-            </p>
-
+            <p className="text-[14px] font-semibold text-[var(--text-h)]">TIP FOR ACCURACY</p>
             <p className="mt-1 text-[14px] leading-relaxed text-[var(--text)]">
-              For more accurate results please take a clear photo of the same
-              skin area under good lighting. Avoid wearing heavy make-up, hat
-              or glasses while taking a selfie. This helps the AI analyze the
-              spot more precisely and distinguish subtle texture.
+              For more accurate results please take a clear photo of the same skin area under good lighting. Avoid wearing heavy make-up, hat or glasses while taking a selfie. This helps the AI analyze the spot more precisely and distinguish subtle texture.
             </p>
           </div>
         </div>
@@ -518,62 +154,23 @@ export default function CapturePhoto({ onSubmit }) {
       {stage === 'camera' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
           <div className="relative w-full max-w-[448px] overflow-hidden rounded-xl bg-black">
-            <button
-              type="button"
-              onClick={closeCamera}
-              aria-label="Close camera"
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-            >
-              <X className="h-5 w-5" />
+            <button type="button" onClick={closeCamera} className="absolute right-3 top-3 z-10 flex h-[36px] w-[36px] items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70">
+              <X className="h-[20px] w-[20px]" />
             </button>
-
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`aspect-[3/4] w-full object-cover ${
-                facingMode === 'user' ? 'scale-x-[-1]' : ''
-              }`}
-            />
-
+            <video ref={videoRef} autoPlay playsInline muted className={`aspect-[3/4] w-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`} />
+            
             <div className="grid grid-cols-3 items-center bg-black py-5 px-4">
               <div className="flex justify-start">
-                <button
-                  type="button"
-                  onClick={openGallery}
-                  aria-label="Choose from gallery"
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white"
-                >
-                  <ImageIcon className="h-5 w-5" strokeWidth={2} />
+                <button type="button" onClick={openGallery} className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-white/20 text-white">
+                  <ImageIcon className="h-[20px] w-[20px]" strokeWidth={2} />
                 </button>
               </div>
-
               <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={capturePhoto}
-                  aria-label="Capture photo"
-                  className="h-16 w-16 rounded-full border-4 border-white bg-white/20"
-                />
+                <button type="button" onClick={capturePhoto} className="h-[64px] w-[64px] rounded-full border-4 border-white bg-white/20" />
               </div>
-
               <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={flipCamera}
-                  disabled={isFlipping}
-                  aria-label="Flip camera"
-                  className={`flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-white transition-all duration-200 ${
-                    isFlipping
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:scale-110 hover:bg-white/30 active:scale-95'
-                  }`}
-                >
-                  <RefreshCw
-                    className={`h-5 w-5 ${isFlipping ? 'animate-spin' : ''}`}
-                    strokeWidth={2}
-                  />
+                <button type="button" onClick={flipCamera} disabled={isFlipping} className={`flex h-[44px] w-[44px] items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-white transition-all duration-200 ${isFlipping ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110 hover:bg-white/30 active:scale-95'}`}>
+                  <RefreshCw className={`h-[20px] w-[20px] ${isFlipping ? 'animate-spin' : ''}`} strokeWidth={2} />
                 </button>
               </div>
             </div>
@@ -584,81 +181,25 @@ export default function CapturePhoto({ onSubmit }) {
       {stage === 'crop' && capturedImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
           <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-[var(--bg)]">
-            <div
-              ref={cropContainerRef}
-              className="relative aspect-[3/4] w-full touch-none select-none overflow-hidden bg-black"
-            >
-              <img
-                ref={cropImageRef}
-                src={capturedImage}
-                alt="Crop preview"
-                className="pointer-events-none block h-full w-full object-contain"
-                draggable={false}
-              />
+            <div ref={cropContainerRef} className="relative aspect-[3/4] w-full touch-none select-none overflow-hidden bg-black">
+              <img ref={cropImageRef} src={capturedImage} alt="Crop preview" className="pointer-events-none block h-full w-full object-contain" draggable={false} />
 
-              <div
-                onPointerDown={handleCropDragStart}
-                className="absolute cursor-move border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]"
-                style={{
-                  left: `${cropBox.x}%`,
-                  top: `${cropBox.y}%`,
-                  width: `${cropBox.w}%`,
-                  height: `${cropBox.h}%`,
-                }}
-              >
-                <div
-                  onPointerDown={(e) => handleCropResizeStart(e, 'nw')}
-                  className="absolute -left-2 -top-2 h-5 w-5 cursor-nw-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
-                />
-                <div
-                  onPointerDown={(e) => handleCropResizeStart(e, 'ne')}
-                  className="absolute -right-2 -top-2 h-5 w-5 cursor-ne-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
-                />
-                <div
-                  onPointerDown={(e) => handleCropResizeStart(e, 'sw')}
-                  className="absolute -bottom-2 -left-2 h-5 w-5 cursor-sw-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
-                />
-                <div
-                  onPointerDown={(e) => handleCropResizeStart(e, 'se')}
-                  className="absolute -bottom-2 -right-2 h-5 w-5 cursor-se-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
-                />
-
-                <div
-                  onPointerDown={(e) => handleCropResizeStart(e, 'n')}
-                  className="absolute -top-2 left-1/2 h-5 w-5 -translate-x-1/2 cursor-n-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
-                />
-                <div
-                  onPointerDown={(e) => handleCropResizeStart(e, 's')}
-                  className="absolute -bottom-2 left-1/2 h-5 w-5 -translate-x-1/2 cursor-s-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
-                />
-                <div
-                  onPointerDown={(e) => handleCropResizeStart(e, 'w')}
-                  className="absolute -left-2 top-1/2 h-5 w-5 -translate-y-1/2 cursor-w-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
-                />
-                <div
-                  onPointerDown={(e) => handleCropResizeStart(e, 'e')}
-                  className="absolute -right-2 top-1/2 h-5 w-5 -translate-y-1/2 cursor-e-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
-                />
+              <div onPointerDown={handleCropDragStart} className="absolute cursor-move border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]" style={{ left: `${cropBox.x}%`, top: `${cropBox.y}%`, width: `${cropBox.w}%`, height: `${cropBox.h}%` }}>
+                {['nw', 'ne', 'sw', 'se'].map(dir => (
+                  <div key={dir} onPointerDown={(e) => handleCropResizeStart(e, dir)} className={`absolute ${dir.includes('n') ? '-top-2' : '-bottom-2'} ${dir.includes('w') ? '-left-2' : '-right-2'} h-[20px] w-[20px] cursor-${dir}-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]`} />
+                ))}
+                {['n', 's', 'w', 'e'].map(dir => (
+                  <div key={dir} onPointerDown={(e) => handleCropResizeStart(e, dir)} className={`absolute ${dir === 'n' || dir === 's' ? 'left-1/2 -translate-x-1/2' : 'top-1/2 -translate-y-1/2'} ${dir === 'n' ? '-top-2' : dir === 's' ? '-bottom-2' : dir === 'w' ? '-left-2' : '-right-2'} h-[20px] w-[20px] cursor-${dir}-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]`} />
+                ))}
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-3 p-4">
-              <button
-                type="button"
-                onClick={cancelCrop}
-                aria-label="Back to take photo page"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] text-red-500 hover:bg-[var(--code-bg)]"
-              >
-                <X className="h-5 w-5" />
+              <button type="button" onClick={cancelCrop} className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[var(--border)] text-red-500 hover:bg-[var(--code-bg)]">
+                <X className="h-[20px] w-[20px]" />
               </button>
-
-              <button
-                type="button"
-                onClick={confirmCrop}
-                aria-label="Confirm crop"
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--text-h)] text-[var(--bg)] hover:opacity-90"
-              >
-                <Check className="h-5 w-5" />
+              <button type="button" onClick={confirmCrop} className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[var(--text-h)] text-[var(--bg)] hover:opacity-90">
+                <Check className="h-[20px] w-[20px]" />
               </button>
             </div>
           </div>
@@ -668,40 +209,14 @@ export default function CapturePhoto({ onSubmit }) {
       {stage === 'preview' && capturedImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
           <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-[var(--bg)]">
-            <img
-              src={capturedImage}
-              alt="Captured skin area preview"
-              className="max-h-[60vh] w-full object-contain"
-            />
+            <img src={capturedImage} alt="Captured preview" className="max-h-[60vh] w-full object-contain" />
 
             <div className="flex gap-3 p-4">
-              <button
-                type="button"
-                onClick={retake}
-                disabled={isValidating || isOpeningCamera}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-3 font-semibold text-[var(--text-h)] hover:bg-[var(--code-bg)] disabled:opacity-50"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Retake
+              <button type="button" onClick={retake} disabled={isValidating || isOpeningCamera} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-3 font-semibold text-[var(--text-h)] hover:bg-[var(--code-bg)] disabled:opacity-50">
+                <RotateCcw className="h-[16px] w-[16px]" /> Retake
               </button>
-
-              <button
-                type="button"
-                onClick={submitPhoto}
-                disabled={isValidating}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] py-3 font-semibold text-[var(--bg)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isValidating ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Checking...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Submit
-                  </>
-                )}
+              <button type="button" onClick={submitPhoto} disabled={isValidating} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] py-3 font-semibold text-[var(--bg)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                {isValidating ? <><RefreshCw className="h-[16px] w-[16px] animate-spin" /> Checking...</> : <><Check className="h-[16px] w-[16px]" /> Submit</>}
               </button>
             </div>
           </div>
