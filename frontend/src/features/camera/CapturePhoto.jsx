@@ -12,8 +12,8 @@ import {
   Image as ImageIcon,
   RefreshCw,
 } from 'lucide-react';
-import scanDevicePhoto from '../../assets/scan-device.png';
-import selfieCapturePhoto from '../../assets/selfie-capture.png';
+import localScanDevicePhoto from '../../assets/scan-device.png';
+import localSelfieCapturePhoto from '../../assets/selfie-capture.png';
 
 const TRUST_ITEMS = [
   { icon: ShieldKeyhole, label: 'Private & secure' },
@@ -38,6 +38,11 @@ function dataURLtoFile(dataurl, filename) {
 }
 
 export default function CapturePhoto({ onSubmit }) {
+  // Extract the Shopify CDN image URLs, falling back to local imports for localhost dev
+  const widgetRoot = document.getElementById('ai-skin-assessment');
+  const scanDeviceImg = widgetRoot?.dataset?.scanDeviceImg || localScanDevicePhoto;
+  const selfieCaptureImg = widgetRoot?.dataset?.selfieCaptureImg || localSelfieCapturePhoto;
+
   const [stage, setStage] = useState('idle');
   const [capturedImage, setCapturedImage] = useState(null);
   const [cameraError, setCameraError] = useState('');
@@ -193,9 +198,9 @@ export default function CapturePhoto({ onSubmit }) {
 
   const retake = async () => {
     if (isOpeningCamera || isValidating) return;
-    
+
     setIsOpeningCamera(true);
-    
+
     try {
       setCapturedImage(null);
       setValidationError('');
@@ -353,9 +358,15 @@ export default function CapturePhoto({ onSubmit }) {
       formData.append('image', imageFile);
       formData.append('session_id', sessionId);
 
+      // Check if running on local Vite server
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+      // Route to local FastAPI on localhost, or Shopify App Proxy in production
+      const baseUrl = isLocalhost ? 'http://localhost:8000' : '/apps/celrevive-backend';
+
       const widgetRoot = document.getElementById('ai-skin-assessment');
       const customerName = widgetRoot?.dataset?.customerName || 'Customer';
-      const apiUrl = `/apps/celrevive-backend/api/v1/image-analysis?user_full_name=${encodeURIComponent(customerName)}`;
+      const apiUrl = `${baseUrl}/api/v1/image-analysis?user_full_name=${encodeURIComponent(customerName)}`;
 
       const res = await fetch(apiUrl, {
         method: 'POST',
@@ -368,7 +379,7 @@ export default function CapturePhoto({ onSubmit }) {
 
       const data = await res.json();
       return { isValid: true, sessionId, backendData: data };
-      
+
     } catch (error) {
       console.error('CRASH REASON:', error);
       setValidationError(`Error: ${error.message}`);
@@ -388,45 +399,37 @@ export default function CapturePhoto({ onSubmit }) {
     }
   };
 
-  const getCursor = (dir) => {
-    const map = {
-      n: 'n-resize', s: 's-resize', e: 'e-resize', w: 'w-resize',
-      ne: 'ne-resize', nw: 'nw-resize', se: 'se-resize', sw: 'sw-resize',
-    };
-    return map[dir] || 'pointer';
-  };
-
   return (
     <div className="flex w-full flex-col bg-[var(--bg)]">
       <div className="flex w-full shrink-0 flex-col items-center justify-center px-4 py-5">
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-[768px]">
           <div className="mb-4 text-center">
-            <h1 className="m-0 text-xl font-bold leading-tight text-[var(--text-h)] sm:text-2xl md:text-[28px]">
+            <h1 className="m-0 text-[20px] font-bold leading-tight text-[var(--text-h)] sm:text-[24px] md:text-[28px]">
               Capture a Photo of Your Affected Skin Area or Take a Selfie!
             </h1>
 
             {validationError && (
-              <p className="mt-2 text-sm font-medium text-red-500">
+              <p className="mt-2 text-[14px] font-medium text-red-500">
                 {validationError}
               </p>
             )}
 
-            <div className="mx-auto mt-2 h-[2px] w-14 bg-[var(--text-h)]" />
+            <div className="mx-auto mt-2 h-[2px] w-[56px] bg-[var(--text-h)]" />
           </div>
 
           <div className="rounded-xl border border-[var(--border)] p-3 md:p-4">
             <div className="grid grid-cols-2 gap-3 overflow-hidden rounded-lg">
-              <div className="h-56 overflow-hidden rounded-lg bg-[var(--code-bg)] sm:h-64 md:h-72">
+              <div className="h-[224px] overflow-hidden rounded-lg bg-[var(--code-bg)] sm:h-[256px] md:h-[288px]">
                 <img
-                  src={scanDevicePhoto}
+                  src={scanDeviceImg}
                   alt="Scanning a skin spot with a phone camera"
                   className="h-full w-full object-cover"
                 />
               </div>
 
-              <div className="h-56 overflow-hidden rounded-lg bg-[var(--code-bg)] sm:h-64 md:h-72">
+              <div className="h-[224px] overflow-hidden rounded-lg bg-[var(--code-bg)] sm:h-[256px] md:h-[288px]">
                 <img
-                  src={selfieCapturePhoto}
+                  src={selfieCaptureImg}
                   alt="Taking a selfie for skin analysis"
                   className="h-full w-full object-cover"
                 />
@@ -438,11 +441,11 @@ export default function CapturePhoto({ onSubmit }) {
                 WHY USERS TRUST US:
               </p>
 
-              <div className="mx-auto mt-3 grid max-w-md grid-cols-2 gap-x-10 gap-y-2">
+              <div className="mx-auto mt-3 grid max-w-[448px] grid-cols-2 gap-x-[40px] gap-y-2">
                 {TRUST_ITEMS.map(({ icon: Icon, label }) => (
                   <div
                     key={label}
-                    className="flex items-center gap-2 text-sm text-[var(--text)]"
+                    className="flex items-center gap-2 text-[14px] text-[var(--text)]"
                   >
                     <Icon
                       className="h-4 w-4 shrink-0 text-[var(--text-h)]"
@@ -458,7 +461,7 @@ export default function CapturePhoto({ onSubmit }) {
               <button
                 type="button"
                 onClick={() => openCamera(facingMode)}
-                className="flex h-11 w-full max-w-sm items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
+                className="flex h-[44px] w-full max-w-[384px] items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] text-[14px] font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
               >
                 <Camera className="h-4 w-4" strokeWidth={2} />
                 Take a photo
@@ -466,7 +469,7 @@ export default function CapturePhoto({ onSubmit }) {
             </div>
 
             {cameraError && (
-              <p className="mt-2 text-center text-xs text-red-500">
+              <p className="mt-2 text-center text-[12px] text-red-500">
                 {cameraError}
               </p>
             )}
@@ -492,17 +495,17 @@ export default function CapturePhoto({ onSubmit }) {
       </div>
 
       <div className="w-full px-4 pb-10">
-        <div className="mx-auto flex max-w-3xl gap-3 rounded-xl border border-[var(--border)] p-5">
+        <div className="mx-auto flex max-w-[768px] gap-3 rounded-xl border border-[var(--border)] p-5">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent)]">
             <Info className="h-4 w-4" strokeWidth={2} />
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-[var(--text-h)]">
+            <p className="text-[14px] font-semibold text-[var(--text-h)]">
               TIP FOR ACCURACY
             </p>
 
-            <p className="mt-1 text-sm leading-relaxed text-[var(--text)]">
+            <p className="mt-1 text-[14px] leading-relaxed text-[var(--text)]">
               For more accurate results please take a clear photo of the same
               skin area under good lighting. Avoid wearing heavy make-up, hat
               or glasses while taking a selfie. This helps the AI analyze the
@@ -514,7 +517,7 @@ export default function CapturePhoto({ onSubmit }) {
 
       {stage === 'camera' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-          <div className="relative w-full max-w-md overflow-hidden rounded-xl bg-black">
+          <div className="relative w-full max-w-[448px] overflow-hidden rounded-xl bg-black">
             <button
               type="button"
               onClick={closeCamera}
@@ -580,11 +583,10 @@ export default function CapturePhoto({ onSubmit }) {
 
       {stage === 'crop' && capturedImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-xl bg-[var(--bg)]">
+          <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-[var(--bg)]">
             <div
               ref={cropContainerRef}
               className="relative aspect-[3/4] w-full touch-none select-none overflow-hidden bg-black"
-              style={{ touchAction: 'none' }}
             >
               <img
                 ref={cropImageRef}
@@ -596,13 +598,12 @@ export default function CapturePhoto({ onSubmit }) {
 
               <div
                 onPointerDown={handleCropDragStart}
-                className="absolute cursor-move border-2 border-white"
+                className="absolute cursor-move border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]"
                 style={{
                   left: `${cropBox.x}%`,
                   top: `${cropBox.y}%`,
                   width: `${cropBox.w}%`,
                   height: `${cropBox.h}%`,
-                  boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
                 }}
               >
                 <div
@@ -624,39 +625,19 @@ export default function CapturePhoto({ onSubmit }) {
 
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'n')}
-                  style={{
-                    cursor: getCursor('n'),
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                  }}
-                  className="absolute -top-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
+                  className="absolute -top-2 left-1/2 h-5 w-5 -translate-x-1/2 cursor-n-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 's')}
-                  style={{
-                    cursor: getCursor('s'),
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                  }}
-                  className="absolute -bottom-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
+                  className="absolute -bottom-2 left-1/2 h-5 w-5 -translate-x-1/2 cursor-s-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'w')}
-                  style={{
-                    cursor: getCursor('w'),
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                  }}
-                  className="absolute -left-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
+                  className="absolute -left-2 top-1/2 h-5 w-5 -translate-y-1/2 cursor-w-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
                 <div
                   onPointerDown={(e) => handleCropResizeStart(e, 'e')}
-                  style={{
-                    cursor: getCursor('e'),
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                  }}
-                  className="absolute -right-2 h-5 w-5 rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
+                  className="absolute -right-2 top-1/2 h-5 w-5 -translate-y-1/2 cursor-e-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]"
                 />
               </div>
             </div>
@@ -686,7 +667,7 @@ export default function CapturePhoto({ onSubmit }) {
 
       {stage === 'preview' && capturedImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-xl bg-[var(--bg)]">
+          <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-[var(--bg)]">
             <img
               src={capturedImage}
               alt="Captured skin area preview"

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import heroImg from '../../assets/skin-analysis.png';
+import localHeroImg from '../../assets/skin-analysis.png';
 
 export default function LandingIntro({ onStartAssessment }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConsentGiven, setIsConsentGiven] = useState(false);
+
+  // Extract the Shopify CDN image URL, falling back to local import for localhost dev
+  const widgetRoot = document.getElementById('ai-skin-assessment');
+  const heroImg = widgetRoot?.dataset?.heroImg || localHeroImg;
 
   const handleStartAssessment = async () => {
     if (isSubmitting || !isConsentGiven) return;
@@ -62,11 +66,13 @@ export default function LandingIntro({ onStartAssessment }) {
 
         <div className="flex flex-[1_1_400px] justify-center">
           <div className="w-full max-w-[450px] rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-4 shadow-sm">
-            <img
-              src={heroImg}
-              alt="AI Skin Analysis Model"
-              className="block h-auto w-full rounded-[10px] object-cover"
-            />
+            {heroImg && (
+              <img
+                src={heroImg}
+                alt="AI Skin Analysis Model"
+                className="block h-auto w-full rounded-[10px] object-cover"
+              />
+            )}
           </div>
         </div>
 
@@ -77,11 +83,11 @@ export default function LandingIntro({ onStartAssessment }) {
           <input 
             type="checkbox" 
             id="consent" 
-            className="h-4 w-4 cursor-pointer accent-[var(--text-h)]"
+            className="h-[16px] w-[16px] cursor-pointer accent-[var(--text-h)]"
             checked={isConsentGiven}
             onChange={(e) => setIsConsentGiven(e.target.checked)}
           />
-          <label htmlFor="consent" className="cursor-pointer select-none text-sm font-medium text-[var(--text)]">
+          <label htmlFor="consent" className="cursor-pointer select-none text-[14px] font-medium text-[var(--text)]">
             I agree to share my image for AI analysis
           </label>
         </div>
@@ -89,7 +95,7 @@ export default function LandingIntro({ onStartAssessment }) {
         <button
           onClick={handleStartAssessment}
           disabled={isSubmitting || !isConsentGiven}
-          className="cursor-pointer rounded-none border-none bg-[var(--text-h)] px-12 py-4 text-xs font-bold tracking-[2px] text-[var(--bg)] shadow-sm transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="cursor-pointer rounded-none border-none bg-[var(--text-h)] px-[48px] py-[16px] text-[12px] font-bold tracking-[2px] text-[var(--bg)] shadow-sm transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? 'STARTING...' : 'BEGIN ASSESSMENT'}
         </button>
