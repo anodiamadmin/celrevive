@@ -392,7 +392,7 @@ export default function Questionnaire({ onComplete }) {
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[var(--bg)]">
+    <div className="flex flex-1 flex-col overflow-hidden bg-[var(--bg)]">
       {/* Progress bar + question counter */}
       <div className="w-full shrink-0 border-b border-[var(--border)] px-6 pb-3 pt-3">
         <div className="flex justify-end">

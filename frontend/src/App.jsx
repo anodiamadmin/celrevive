@@ -23,8 +23,8 @@ function App() {
 
   return (
 
-    <div id="ai-skin-assessment" className="pt-[120px] min-h-screen">
-      
+    // <div id="ai-skin-assessment" className="pt-[120px] min-h-screen">   // to be removed after testing
+    <div className="flex flex-col min-h-screen w-full">
       {/* 1. Landing Page */}
       {step === 'landing' && (
         <LandingIntro onStartAssessment={() => setStep('camera')} />

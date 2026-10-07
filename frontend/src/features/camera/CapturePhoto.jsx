@@ -397,7 +397,7 @@ export default function CapturePhoto({ onSubmit }) {
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-y-auto bg-[var(--bg)]">
+    <div className="flex w-full flex-col bg-[var(--bg)]">
       <div className="flex w-full shrink-0 flex-col items-center justify-center px-4 py-5">
         <div className="w-full max-w-3xl">
           <div className="mb-4 text-center">
