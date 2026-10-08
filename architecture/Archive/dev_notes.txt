@@ -214,3 +214,15 @@ VALUES (
     'Customer session initiated with consent.'
 );
 
+ASYNC WORKFLOW CHANGES
+
+Implemented the asynchronous image-analysis handoff in celrevive_backend/.
+
+POST /api/v1/image-validation validates and saves the image, queues analysis, and returns next_step: "questionnaire" on success. Validation runs in a threadpool so image processing doesn’t block the event loop. See image.py.
+The old POST /api/v1/image-analysis path remains as a deprecated async alias and returns 202 Accepted instead of waiting for analysis.
+GET /api/v1/sessions/{session_id}/analysis reports pending, completed, or failed; completed results include detected concerns. See sessions.py.
+The worker records success or failure in the session status in visual_ai_task.py. I also updated dev_doc with the client flow.
+
+Added POST /api/v1/sessions in sessions.py, registered it in main.py, and defined its request/response models in customer_session.py.
+
+The endpoint creates a STARTED session using the supplied Shopify details, requires explicit consent, and returns the generated session_id. Shopify details are request data rather than hard-coded sample values; notes default to “Customer session initiated with consent.”
