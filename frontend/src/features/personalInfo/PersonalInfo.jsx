@@ -7,16 +7,6 @@ const PinIcon = () => (
   </svg>
 );
 
-/**
- * PersonalInfo — "Information Overview" step.
- * Sits between the landing/begin-assessment page and the camera step:
- *   begin assessment -> personal info (this page) -> camera -> questionnaire
- *
- * Wire-up (react-router example):
- *   <Route path="/personal-info" element={
- *     <PersonalInfo onSaved={(data) => { saveAnswers(data); navigate('/camera'); }} />
- *   } />
- */
 export default function PersonalInfo({ initialData, onSaved }) {
   const [gender, setGender] = useState(initialData?.gender || '');
   const [dob, setDob] = useState(initialData?.dob || '');
@@ -34,39 +24,26 @@ export default function PersonalInfo({ initialData, onSaved }) {
   };
 
   return (
-    <div
-      className="min-h-screen w-full flex items-center justify-center px-6"
-      style={{ background: 'var(--bg)', fontFamily: 'var(--sans)' }}
-    >
-      <div
-        className="w-full max-w-[440px] rounded-2xl border p-8"
-        style={{ background: 'var(--code-bg)', borderColor: 'var(--border)', boxShadow: 'var(--shadow)' }}
-      >
-        <h1
-          className="text-2xl font-bold mb-1.5"
-          style={{ color: 'var(--text-h)', fontFamily: 'var(--heading)' }}
-        >
+    <div className="flex min-h-screen w-full items-center justify-center bg-[var(--bg)] px-6">
+      <div className="w-full max-w-[440px] rounded-2xl border border-[var(--border)] bg-[var(--code-bg)] p-8 shadow-sm">
+        <h1 className="mb-1.5 text-2xl font-bold text-[var(--text-h)]">
           Information Overview
         </h1>
-        <p className="text-sm mb-6" style={{ color: 'var(--text)' }}>
+        <p className="mb-6 text-sm text-[var(--text)]">
           Please provide your personal details below.
         </p>
 
-        <div className="grid grid-cols-2 gap-4 mb-5">
-          {/* Gender */}
+        <div className="mb-5 grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-h)' }}>
+            <label className="mb-1.5 block text-sm font-medium text-[var(--text-h)]">
               Gender
             </label>
             <select
               value={gender}
               onChange={(e) => setGender(e.target.value)}
-              className="w-full h-12 rounded-xl border px-3 text-[15px] outline-none appearance-none"
-              style={{
-                borderColor: touched && !gender ? '#d64545' : 'var(--border)',
-                background: 'var(--bg)',
-                color: gender ? 'var(--text-h)' : 'var(--text)',
-              }}
+              className={`h-12 w-full appearance-none rounded-xl border bg-[var(--bg)] px-3 text-[15px] outline-none ${
+                touched && !gender ? 'border-red-500' : 'border-[var(--border)]'
+              } ${gender ? 'text-[var(--text-h)]' : 'text-[var(--text)]'}`}
             >
               <option value="" disabled>Select gender</option>
               <option value="female">Female</option>
@@ -76,45 +53,37 @@ export default function PersonalInfo({ initialData, onSaved }) {
             </select>
           </div>
 
-          {/* Date of birth */}
           <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-h)' }}>
+            <label className="mb-1.5 block text-sm font-medium text-[var(--text-h)]">
               Date of Birth
             </label>
             <input
               type="date"
               value={dob}
               onChange={(e) => setDob(e.target.value)}
-              className="w-full h-12 rounded-xl border px-3 text-[15px] outline-none"
-              style={{
-                borderColor: touched && !dob ? '#d64545' : 'var(--border)',
-                background: 'var(--bg)',
-                color: dob ? 'var(--text-h)' : 'var(--text)',
-              }}
+              className={`h-12 w-full rounded-xl border bg-[var(--bg)] px-3 text-[15px] outline-none ${
+                touched && !dob ? 'border-red-500' : 'border-[var(--border)]'
+              } ${dob ? 'text-[var(--text-h)]' : 'text-[var(--text)]'}`}
             />
           </div>
         </div>
 
-        {/* Location */}
         <div className="mb-7">
-          <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-h)' }}>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--text-h)]">
             Location
           </label>
           <div
-            className="flex items-center gap-3 h-12 rounded-xl border px-3"
-            style={{
-              borderColor: touched && !location.trim() ? '#d64545' : 'var(--border)',
-              background: 'var(--bg)',
-            }}
+            className={`flex h-12 items-center gap-3 rounded-xl border bg-[var(--bg)] px-3 ${
+              touched && !location.trim() ? 'border-red-500' : 'border-[var(--border)]'
+            }`}
           >
-            <span style={{ color: 'var(--text)' }}><PinIcon /></span>
+            <span className="text-[var(--text)]"><PinIcon /></span>
             <input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Search city or zip code"
-              className="flex-1 h-full bg-transparent outline-none text-[15px]"
-              style={{ color: 'var(--text-h)' }}
+              className="h-full flex-1 bg-transparent text-[15px] text-[var(--text-h)] outline-none placeholder:text-[var(--text)]"
             />
           </div>
         </div>
@@ -122,8 +91,9 @@ export default function PersonalInfo({ initialData, onSaved }) {
         <button
           type="button"
           onClick={handleSave}
-          className="w-full h-12 rounded-xl font-semibold text-[15px] text-white transition-opacity"
-          style={{ background: '#1a3fd6', opacity: isComplete ? 1 : 0.7 }}
+          className={`h-12 w-full rounded-xl text-[15px] font-semibold text-white transition-opacity ${
+            isComplete ? 'bg-[var(--accent)] hover:opacity-90' : 'bg-[var(--accent)] opacity-70'
+          }`}
         >
           Save Changes
         </button>
