@@ -1,12 +1,11 @@
 import uuid
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from app.repositories.skin_concern_detection_repository import store_visual_ai_detections
 from app.schemas.visual_ai import ImageSkinConcern, SUPPORTED_IMAGE_CONCERNS, VisualAIResponse
-from app.services.visual_ai.client import VisualAIAnalysisResult
+from app.services.visual_ai.client import VisualAIAnalysisResult, VisualAIAPIError
 from app.workers.visual_ai_task import run_visual_ai_analysis
 
 
@@ -24,6 +23,7 @@ class FakeDatabase:
         self.executed = []
         self.rows = []
         self.commit_count = 0
+        self.rollback_count = 0
 
     async def execute(self, statement):
         self.executed.append(statement)
@@ -37,6 +37,9 @@ class FakeDatabase:
 
     async def commit(self):
         self.commit_count += 1
+
+    async def rollback(self):
+        self.rollback_count += 1
 
 
 def detections():
@@ -114,6 +117,29 @@ class FakeSessionContext:
 
 
 @pytest.mark.asyncio
+async def test_worker_persists_failed_status_when_visual_ai_fails():
+    image_id = uuid.uuid4()
+    session_id = uuid.uuid4()
+    db = FakeDatabase(session_id)
+
+    with patch("app.workers.visual_ai_task.AsyncSessionLocal", return_value=FakeSessionContext(db)), \
+        patch(
+            "app.workers.visual_ai_task.get_image_bytes_and_mime",
+            new=AsyncMock(return_value=(b"bytes", "image/jpeg")),
+        ), \
+        patch(
+            "app.workers.visual_ai_task.call_visual_ai",
+            side_effect=VisualAIAPIError("AI unavailable"),
+        ):
+        await run_visual_ai_analysis(image_id, session_id)
+
+    assert len(db.executed) == 1
+    assert "update customer_session" in str(db.executed[0]).lower()
+    assert db.commit_count == 1
+    assert db.rollback_count == 1
+
+
+@pytest.mark.asyncio
 async def test_worker_opens_own_session_and_persists_validated_result():
     image_id = uuid.uuid4()
     session_id = uuid.uuid4()
@@ -132,3 +158,5 @@ async def test_worker_opens_own_session_and_persists_validated_result():
     call_visual_ai_mock.assert_called_once_with(b"bytes", "image/jpeg")
     assert len(db.rows) == 28
     assert db.commit_count == 1
+    assert "update customer_session" in str(db.executed[0]).lower()
+    assert db.executed[0].compile().params["session_status"] == "RECOMMENDATION_GENERATED"

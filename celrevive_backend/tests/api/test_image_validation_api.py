@@ -70,6 +70,33 @@ def test_valid_image_returns_questionnaire_route(
     assert captured["image_height"] == 600
 
 
+def test_legacy_analysis_upload_path_returns_accepted_without_waiting(
+    client,
+    sharp_image,
+    image_to_bytes,
+    monkeypatch,
+):
+    expected_image_id = uuid.uuid4()
+
+    async def fake_accept_validated_image(db, background_tasks, **kwargs):
+        return expected_image_id
+
+    monkeypatch.setattr(
+        "app.api.v1.routes.image.accept_validated_image",
+        fake_accept_validated_image,
+    )
+
+    response = client.post(
+        "/api/v1/image-analysis",
+        files={"image": ("skin.jpg", image_to_bytes(sharp_image), "image/jpeg")},
+        data={"session_id": str(uuid.uuid4())},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["image_id"] == str(expected_image_id)
+    assert response.json()["next_step"] == "questionnaire"
+
+
 def test_missing_session_id_is_validation_error(client, sharp_image, image_to_bytes):
     response = client.post(
         "/api/v1/image-validation",

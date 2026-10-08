@@ -17,7 +17,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.routes.image_analysis import router as image_router
+from app.api.v1.routes.image import router as image_router
+from app.api.v1.routes.sessions import router as sessions_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,6 +36,7 @@ app.add_middleware(
 )
 
 app.include_router(image_router, prefix="/api/v1", tags=["image-analysis"])
+app.include_router(sessions_router, prefix="/api/v1", tags=["sessions"])
 
 @app.get("/health")
 def health_check() -> dict:
