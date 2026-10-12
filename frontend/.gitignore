@@ -25,3 +25,8 @@ dist-ssr
 
 # Dedicated folder for AI prompt files
 .ai_prompts/
+
+# Environment variables
+.env
+.env.development
+.env.production
