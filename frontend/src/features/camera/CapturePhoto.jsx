@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useImageCapture } from '../../hooks/useImageCapture';
+import { validateImage } from '../../api';
+import { useSessionStore } from '../../store/useSessionStore.js';
 import {
   Camera, ShieldKeyhole, MonitorSmartphone, BriefcaseMedical, Bot,
   Info, X, RotateCcw, Check, Image as ImageIcon, RefreshCw,
@@ -72,6 +74,8 @@ function TopLayerModal({ isOpen, children }) {
 }
 
 export default function CapturePhoto({ onSubmit }) {
+  const sessionId = useSessionStore((state) => state.sessionId);
+  
   const {
     stage, setStage, capturedImage, setCapturedImage,
     cameraError, isOpeningCamera, facingMode, isFlipping, cropBox,
@@ -81,55 +85,47 @@ export default function CapturePhoto({ onSubmit }) {
   } = useImageCapture();
 
   const [isValidating, setIsValidating] = useState(false);
+  const [loadingText, setLoadingText] = useState('');
   const [validationError, setValidationError] = useState('');
-
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const baseUrl = isLocalhost ? 'http://localhost:8000' : '/apps/celrevive-backend';
 
   const widgetRoot = document.getElementById('ai-skin-assessment');
   const scanDeviceImg = widgetRoot?.dataset?.scanDeviceImg || localScanDevicePhoto;
   const selfieCaptureImg = widgetRoot?.dataset?.selfieCaptureImg || localSelfieCapturePhoto;
 
-  const validateImage = async (imageData) => {
+  const submitPhoto = async () => {
+    if (!capturedImage || isValidating) return;
+
+    if (!sessionId) {
+      setValidationError('Session ID missing. Please refresh and restart the assessment.');
+      return;
+    }
+
     setIsValidating(true);
     setValidationError(''); 
 
     try {
-      const imageFile = dataURLtoFile(imageData, 'selfie.jpg');
-      const formData = new FormData();
+      const imageFile = dataURLtoFile(capturedImage, 'selfie.jpg');
       
-      const sessionId = crypto.randomUUID(); 
+      // 1. Validate Image Quality & Trigger Async Analysis
+      setLoadingText('Submitting to AI...');
+      const validationData = await validateImage(imageFile, sessionId);
+      
+      if (!validationData.valid) {
+        throw new Error(validationData.reasons?.join(', ') || 'Image did not pass quality checks.');
+      }
 
-      formData.append('image', imageFile);
-      formData.append('session_id', sessionId);
-
-      const customerName = widgetRoot?.dataset?.customerName || 'Customer';
-      const apiUrl = isLocalhost 
-        ? `${baseUrl}/api/v1/image-analysis?user_full_name=${encodeURIComponent(customerName)}`
-        : `${baseUrl}/image-analysis?user_full_name=${encodeURIComponent(customerName)}`;
-
-      const res = await fetch(apiUrl, { method: 'POST', body: formData });
-
-      if (!res.ok) throw new Error(`Server returned status ${res.status}`);
-
-      const data = await res.json();
-      return { isValid: true, sessionId, backendData: data };
+      // 2. Validation passed and task queued. Pass control to parent component.
+      onSubmit?.(capturedImage, sessionId);
 
     } catch (error) {
       console.error('CRASH REASON:', error);
       setValidationError(`Error: ${error.message}`);
       setCapturedImage(null);
       setStage('idle');
-      return { isValid: false };
     } finally {
       setIsValidating(false);
+      setLoadingText('');
     }
-  };
-
-  const submitPhoto = async () => {
-    if (!capturedImage || isValidating) return;
-    const result = await validateImage(capturedImage);
-    if (result.isValid) onSubmit?.(capturedImage, result.sessionId, result.backendData);
   };
 
   return (
@@ -157,10 +153,10 @@ export default function CapturePhoto({ onSubmit }) {
 
             <div className="mt-3 text-center">
               <p className="text-[11px] font-bold tracking-widest text-[var(--text-h)]">WHY USERS TRUST US:</p>
-              <div className="mx-auto mt-3 grid max-w-[448px] grid-cols-2 gap-x-[40px] gap-y-2 whitespace-nowrap">
+              <div className="mx-auto mt-3 grid max-w-[448px] grid-cols-2 gap-x-[16px] gap-y-2 whitespace-nowrap">
                 {TRUST_ITEMS.map(({ icon: Icon, label }) => (
-                  <div key={label} className="flex items-center gap-2 text-[14px] text-[var(--text)]">
-                    <Icon className="h-[16px] w-[16px] shrink-0 text-[var(--text-h)]" strokeWidth={1.75} />
+                  <div key={label} className="flex items-center gap-1.5 text-[13px] text-[var(--text)]">
+                    <Icon className="h-[15px] w-[15px] shrink-0 text-[var(--text-h)]" strokeWidth={1.75}/>
                     <span>{label}</span>
                   </div>
                 ))}
@@ -269,12 +265,19 @@ export default function CapturePhoto({ onSubmit }) {
         <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-[var(--bg)]">
           <img src={capturedImage} alt="Captured preview" className="max-h-[60vh] w-full object-contain" />
 
+          {/* Validation error displayed inside the modal directly above the buttons */}
+          {validationError && (
+            <div className="border-y border-red-100 bg-red-50 px-4 py-3 text-center">
+              <p className="text-[13px] font-medium text-red-600">{validationError}</p>
+            </div>
+          )}
+
           <div className="flex gap-3 p-4">
             <button type="button" onClick={retake} disabled={isValidating || isOpeningCamera} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-3 font-semibold text-[var(--text-h)] hover:bg-[var(--code-bg)] disabled:opacity-50">
               <RotateCcw className="h-[16px] w-[16px]" /> Retake
             </button>
             <button type="button" onClick={submitPhoto} disabled={isValidating} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] py-3 font-semibold text-[var(--bg)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
-              {isValidating ? <><RefreshCw className="h-[16px] w-[16px] animate-spin" /> Checking...</> : <><Check className="h-[16px] w-[16px]" /> Submit</>}
+              {isValidating ? <><RefreshCw className="h-[16px] w-[16px] animate-spin" /> {loadingText || 'Checking...'}</> : <><Check className="h-[16px] w-[16px]" /> Submit</>}
             </button>
           </div>
         </div>
