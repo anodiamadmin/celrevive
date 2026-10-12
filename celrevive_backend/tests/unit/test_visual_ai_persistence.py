@@ -115,17 +115,18 @@ async def test_frontend_concerns_are_confidence_filtered_sorted_and_limited():
     session_id = uuid.uuid4()
     db = AsyncMock()
     result = Mock()
-    result.all.return_value = [("Acne", 0.91), ("Redness", 0.72)]
+    result.all.return_value = [("Dark Spots & Discoloration", 0.91), ("Oily Skin", 0.72)]
     db.execute.return_value = result
 
     concerns = await get_detected_image_concerns_by_session(db, session_id=session_id)
 
     assert [
         (concern.concern_name, concern.confidence_score) for concern in concerns
-    ] == [("Acne", 0.91), ("Redness", 0.72)]
+    ] == [("Dark Spots & Discoloration", 0.91), ("Oily Skin", 0.72)]
     statement = db.execute.await_args.args[0]
     compiled = statement.compile()
     sql = str(compiled).lower()
+    assert "coalesce(" in sql
     assert "session_skin_concern_detection.confidence_score >" in sql
     assert "order by session_skin_concern_detection.confidence_score desc" in sql
     assert "limit" in sql

@@ -1,6 +1,6 @@
 import uuid
 from typing import List
-from sqlalchemy import delete, desc, select
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.session_skin_concern_detection import SessionSkinConcernDetection
@@ -68,7 +68,10 @@ async def get_detected_image_concerns_by_session(
     """
     stmt = (
         select(
-            SkinConcern.concern_name,
+            func.coalesce(
+                SkinConcern.skin_concern_display_name,
+                SkinConcern.concern_name,
+            ).label("concern_name"),
             SessionSkinConcernDetection.confidence_score,
         )
         .join(
