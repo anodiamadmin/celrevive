@@ -44,7 +44,7 @@ export default function RecommendationPage({ shopifyUser }) {
 
   if (isPolling) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg)] px-[24px] py-[40px] text-center">
+      <div className="flex flex-col items-center justify-center bg-[var(--bg)] px-[24px] py-[80px] text-center">
         <Loader2 className="mb-[16px] h-[48px] w-[48px] animate-spin text-[var(--text-h)]" />
         <h2 className="text-[20px] font-bold text-[var(--text-h)]">Analyzing your skin...</h2>
         <p className="mt-[8px] text-[14px] text-[var(--text)]">We are generating your custom routine.</p>
@@ -54,7 +54,7 @@ export default function RecommendationPage({ shopifyUser }) {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg)] px-[24px] py-[40px] text-center">
+      <div className="flex flex-col items-center justify-center bg-[var(--bg)] px-[24px] py-[80px] text-center">
         <div className="max-w-[448px] rounded-xl border border-red-200 bg-red-50 p-[24px]">
           <h2 className="text-[18px] font-bold text-red-700">Analysis Failed</h2>
           <p className="mt-[8px] text-[14px] text-red-600">{error}</p>
@@ -84,43 +84,41 @@ export default function RecommendationPage({ shopifyUser }) {
   const uniqueConcerns = [...new Set(rawConcerns)];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg)] px-[24px] py-[40px] sm:px-[64px]">
+    <div className="flex flex-col bg-[var(--bg)] px-[24px] py-[40px] sm:px-[64px]">
       
-      {/* Top Content Group */}
-      <div>
-        <div className="mb-[32px]">
-          <h1 className="text-[30px] font-bold text-[var(--text-h)] leading-tight">Hello {firstName}!</h1>
-          <p className="mt-[4px] text-[14px] text-[var(--text)]">Your detailed report is ready.</p>
-        </div>
-
-        <div className="max-w-[576px] rounded-2xl border border-[var(--border)] bg-[var(--code-bg)] p-[32px] shadow-sm">
-          <h2 className="mb-[24px] text-[20px] font-semibold text-[var(--text-h)]">
-            Skin Analysis Result:
-          </h2>
-
-          {uniqueConcerns.length > 0 ? (
-            <div>
-              <p className="text-[14px] leading-relaxed text-[var(--text-h)]">
-                <span className="font-semibold">Primary Concerns: </span> 
-                {uniqueConcerns.join(', ')}.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)] p-[24px] text-center">
-              <div className="mb-[12px] flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent)]">
-                <Sparkles className="h-[24px] w-[24px]" />
-              </div>
-              <h3 className="text-[18px] font-bold text-[var(--text-h)]">Your Skin is Looking Great!</h3>
-              <p className="mt-[4px] text-[14px] text-[var(--text)]">
-                We could not find any major concerns.
-              </p>
-            </div>
-          )}
-        </div>
+      <div className="mb-[32px]">
+        <h1 className="text-[30px] font-bold text-[var(--text-h)] leading-tight">Hello {firstName}!</h1>
+        <p className="mt-[4px] text-[14px] text-[var(--text)]">Your detailed report is ready.</p>
       </div>
 
-      {/* Destruct Session / Start Over Button (Centered at the full width bottom) */}
-      <div className="mt-auto pt-[64px] pb-[32px] flex w-full justify-center">
+      <div className="max-w-[576px] rounded-2xl border border-[var(--border)] bg-[var(--code-bg)] p-[32px] shadow-sm">
+        <h2 className="mb-[24px] text-[20px] font-semibold text-[var(--text-h)]">
+          Skin Analysis Result:
+        </h2>
+
+        {uniqueConcerns.length > 0 ? (
+          <div>
+            <p className="text-[14px] leading-relaxed text-[var(--text)]">
+              <span className="font-semibold text-[var(--text-h)]">Primary Concerns: </span> 
+              {/* Inline style strictly overrides Shopify global theme bolding rules */}
+              <span style={{ fontWeight: 400 }}>{uniqueConcerns.join(', ')}.</span>
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)] p-[24px] text-center">
+            <div className="mb-[12px] flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent)]">
+              <Sparkles className="h-[24px] w-[24px]" />
+            </div>
+            <h3 className="text-[18px] font-bold text-[var(--text-h)]">Your Skin is Looking Great!</h3>
+            <p className="mt-[4px] text-[14px] text-[var(--text)]">
+              We could not find any major concerns.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Destruct Session / Start Over Button */}
+      <div className="mt-[32px] flex w-full justify-center">
         <button 
           onClick={clearSession}
           className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] px-[32px] py-[12px] text-[14px] font-semibold tracking-wide text-[var(--bg)] transition-opacity hover:opacity-90"
