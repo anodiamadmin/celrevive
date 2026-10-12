@@ -1,6 +1,15 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import ForeignKey, String, Text, Boolean, TIMESTAMP, CheckConstraint, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Float,
+    ForeignKey,
+    String,
+    Text,
+    TIMESTAMP,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
@@ -29,6 +38,7 @@ class SessionSkinConcernDetection(Base):
         nullable=True,
     )
     skin_concern_exists: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     if_skin_concern_true_why: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     raw_detection_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     detected_at: Mapped[datetime] = mapped_column(
@@ -37,6 +47,10 @@ class SessionSkinConcernDetection(Base):
 
     __table_args__ = (
         CheckConstraint("detection_source IN ('IMAGE', 'QUESTIONNAIRE')", name="ck_detection_source"),
+        CheckConstraint(
+            "confidence_score IS NULL OR confidence_score BETWEEN 0 AND 1",
+            name="ck_detection_confidence_score",
+        ),
         CheckConstraint(
             "(detection_source = 'IMAGE' AND image_id IS NOT NULL AND questionnaire_response_id IS NULL) "
             "OR (detection_source = 'QUESTIONNAIRE' AND questionnaire_response_id IS NOT NULL AND image_id IS NULL)",

@@ -220,9 +220,35 @@ Implemented the asynchronous image-analysis handoff in celrevive_backend/.
 
 POST /api/v1/image-validation validates and saves the image, queues analysis, and returns next_step: "questionnaire" on success. Validation runs in a threadpool so image processing doesn’t block the event loop. See image.py.
 The old POST /api/v1/image-analysis path remains as a deprecated async alias and returns 202 Accepted instead of waiting for analysis.
-GET /api/v1/sessions/{session_id}/analysis reports pending, completed, or failed; completed results include detected concerns. See sessions.py.
+GET /api/v1/sessions/{session_id}/analysis reports pending, processing, completed, or failed; completed results include detected concerns. See sessions.py.
 The worker records success or failure in the session status in visual_ai_task.py. I also updated dev_doc with the client flow.
 
-Added POST /api/v1/sessions in sessions.py, registered it in main.py, and defined its request/response models in customer_session.py.
+Added POST /api/v1/create-session in sessions.py, registered it in main.py, and defined its request/response models in customer_session.py.
 
 The endpoint creates a STARTED session using the supplied Shopify details, requires explicit consent, and returns the generated session_id. Shopify details are request data rather than hard-coded sample values; notes default to “Customer session initiated with consent.”
+
+
+final update:
+
+skin_concern_display_name added in table skin_concern
+
+
+POST /api/v1/create-session	Start the flow after the customer has provided the required consent. Send JSON containing consent_given: true and any available Shopify identifiers. Save the returned session_id.
+POST /api/v1/image-validation	Upload the image as multipart form data with fields image and session_id. Use the ID returned by session creation. This is the endpoint the frontend should use for image upload.
+GET /api/v1/sessions/{session_id}/analysis	Poll after upload using that same ID. Continue on pending or processing; show results on completed; handle the two failure statuses separately.
+GET /health	Optional backend readiness check; not part of the customer flow.
+POST /api/v1/image-analysis is a deprecated upload alias; use /image-validation for new integration. There is no /api/v1/recommendation/{session_id} route in the current backend.
+
+
+final skin concerns are returned as :
+{
+  "analysis_status": "completed",
+  "primary_concerns": [
+    {
+      "concern_name": "Acne",
+      "confidence_score": 0.87
+    }
+  ]
+}
+
+

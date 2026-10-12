@@ -9,6 +9,7 @@ from app.services.visual_ai.client import (
     VisualAIAPIError,
     VisualAIAnalysisResult,
     VisualAIMalformedResponseError,
+    _load_template_json,
     call_visual_ai,
 )
 
@@ -21,6 +22,7 @@ def template_payload(*, detected_ids: set[str] | None = None) -> dict:
                 "skin_concern_id": concern_id,
                 "skin_concern_name": concern_id,
                 "skin_concern_exists": concern_id in detected_ids,
+                "confidence_score": 0.9 if concern_id in detected_ids else 0.0,
                 "if_skin_concern_true_why": (
                     f"Visible evidence for {concern_id}." if concern_id in detected_ids else ""
                 ),
@@ -32,6 +34,13 @@ def template_payload(*, detected_ids: set[str] | None = None) -> dict:
 
 def fake_settings():
     return SimpleNamespace(GEMINI_API_KEY="test-key", VISUAL_AI_MODEL="test-model")
+
+
+def test_client_template_matches_confidence_schema():
+    payload = json.loads(_load_template_json())
+
+    assert len(payload["image_skin_concerns"]) == 28
+    assert all("confidence_score" in concern for concern in payload["image_skin_concerns"])
 
 
 @patch("app.services.visual_ai.client.get_settings", side_effect=fake_settings)

@@ -7,12 +7,16 @@ cp .env.example .env
 uvicorn app.main:app --reload
 
 Image flow:
-1. POST /api/v1/sessions with Shopify identifiers and consent_given=true.
+1. POST /api/v1/create-session with Shopify identifiers and consent_given=true. The
+   server creates and returns the session_id.
 2. POST /api/v1/image-validation with the returned session_id and image.
 3. When valid, the API returns image_id and next_step="questionnaire"; route the
    customer to the questionnaire immediately. Image analysis runs as a background task.
-4. Poll GET /api/v1/sessions/{session_id}/analysis for pending, completed, or failed
-   status. Completed responses include primary_concerns.
+4. Poll GET /api/v1/sessions/{session_id}/analysis for pending, processing, completed,
+   validation_failed, or analysis_failed status. Validation rejections also return
+   failure_type="validation_failed" from the upload endpoint. Completed responses
+   include at most five primary_concerns,
+   selected by descending confidence_score and limited to scores greater than 0.5.
 
 POST /api/v1/image-analysis is a deprecated async alias for image upload. New clients
 should use /api/v1/image-validation.

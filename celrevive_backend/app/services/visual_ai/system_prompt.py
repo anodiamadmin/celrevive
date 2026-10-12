@@ -27,6 +27,9 @@ SKIN-CONCERN DETECTION RULES
   to evaluate, each with a skin_concern_id and skin_concern_name.
 - For each entry in the template, decide independently whether that specific
   concern is visibly present.
+- Set confidence_score to your confidence that the concern is visibly present,
+  as a number from 0.0 to 1.0. Use a value above 0.5 only when the visual
+  evidence is clear; use 0.5 or below when it is not clearly present.
 - Only mark skin_concern_exists = true when there is clear, specific visual
   evidence in the image for that exact concern.
 - Do not flag a concern based on the presence of a related-but-distinct concern
@@ -45,9 +48,10 @@ RESTRICTED OUTPUT — SUPPORTED CONCERN IDS ONLY
 
 NO-CONCERN BEHAVIOUR
 - If the image shows no visible skin concerns at all, return the full template
-  with every skin_concern_exists set to false and every if_skin_concern_true_why
-  left as an empty string. Do not force a positive detection to avoid returning
-  an all-false result — an all-false result is a valid and expected output.
+  with every skin_concern_exists set to false, confidence_score set to 0.0,
+  and every if_skin_concern_true_why left as an empty string. Do not force a
+  positive detection to avoid returning an all-false result — an all-false
+  result is a valid and expected output.
 
 LANGUAGE STYLE — NO CLINICAL OR DERMATOLOGICAL TERMINOLOGY
 - Write every if_skin_concern_true_why as a layperson looking in a mirror would
@@ -79,6 +83,8 @@ EXPLANATION REQUIREMENT
   the chin."
 - For every entry where skin_concern_exists = false, if_skin_concern_true_why
   must be an empty string "". Never explain an absence.
+- Every entry must include confidence_score as a number between 0.0 and 1.0,
+  inclusive.
 - Never leave if_skin_concern_true_why empty for a true detection, and never
   populate it for a false one.
 
@@ -87,5 +93,6 @@ OUTPUT FORMAT — JSON ONLY
   input template. Do not include markdown code fences, commentary, headers,
   or any text outside the JSON object.
 - Do not alter field names, field order within an entry, or data types.
-  skin_concern_exists must be a JSON boolean (true/false), never a string.
+  skin_concern_exists must be a JSON boolean (true/false), never a string, and
+  confidence_score must be a JSON number, never a string or percentage.
 """.strip()

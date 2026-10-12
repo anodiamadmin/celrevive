@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sessions",
+    "/create-session",
     response_model=CustomerSessionResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -70,10 +70,16 @@ async def get_image_analysis_status(
             detail="Customer session not found.",
         )
 
-    if session.session_status == "ERROR":
+    if session.session_status == "VALIDATION_FAILED":
         return ImageAnalysisStatusResponse(
             session_id=session_id,
-            analysis_status="failed",
+            analysis_status="validation_failed",
+            message="Image validation failed. Please upload a valid image.",
+        )
+    if session.session_status in {"ANALYSIS_FAILED", "ERROR"}:
+        return ImageAnalysisStatusResponse(
+            session_id=session_id,
+            analysis_status="analysis_failed",
             message="Image analysis failed. Please upload the image again.",
         )
     if session.session_status == "RECOMMENDATION_GENERATED":
@@ -91,6 +97,12 @@ async def get_image_analysis_status(
         return ImageAnalysisStatusResponse(
             session_id=session_id,
             analysis_status="pending",
+            message="Image analysis is in progress.",
+        )
+    if session.session_status == "PROCESSING":
+        return ImageAnalysisStatusResponse(
+            session_id=session_id,
+            analysis_status="processing",
             message="Image analysis is in progress.",
         )
 

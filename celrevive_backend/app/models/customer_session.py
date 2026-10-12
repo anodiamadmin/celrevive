@@ -32,9 +32,10 @@ class CustomerSession(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "session_status IN ('STARTED', 'IMAGE_RECEIVED', 'QUESTIONNAIRE_COMPLETED', "
-            "'CONCERNS_COMBINED', 'RECOMMENDATION_GENERATED', 'RETURNED_TO_WIDGET', "
-            "'ABANDONED', 'ERROR')",
+            "session_status IN ('STARTED', 'IMAGE_RECEIVED', 'PROCESSING', "
+            "'QUESTIONNAIRE_COMPLETED', 'CONCERNS_COMBINED', "
+            "'RECOMMENDATION_GENERATED', 'RETURNED_TO_WIDGET', 'ABANDONED', "
+            "'VALIDATION_FAILED', 'ANALYSIS_FAILED', 'ERROR')",
             name="ck_customer_session_status",
         ),
     )

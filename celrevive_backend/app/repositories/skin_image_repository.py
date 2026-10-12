@@ -43,6 +43,22 @@ async def mark_session_image_received(db: AsyncSession, *, session_id: uuid.UUID
     )
 
 
+async def mark_session_validation_failed(
+    db: AsyncSession,
+    *,
+    session_id: uuid.UUID,
+) -> None:
+    result = await db.execute(
+        update(CustomerSession)
+        .where(CustomerSession.session_id == session_id)
+        .values(session_status="VALIDATION_FAILED", updated_at=text("CURRENT_TIMESTAMP"))
+        .returning(CustomerSession.session_id)
+    )
+    if result.scalar_one_or_none() is None:
+        raise ValueError("Customer session does not exist")
+    await db.commit()
+
+
 async def get_image_bytes_and_mime(
     db: AsyncSession,
     *,

@@ -80,6 +80,7 @@ COMMENT ON TABLE benefit IS
 CREATE TABLE IF NOT EXISTS skin_concern (
     concern_id                  VARCHAR(10) PRIMARY KEY,
     concern_name                VARCHAR(255) NOT NULL,
+    skin_concern_display_name   VARCHAR(255),
     detectable_by_selfie        BOOLEAN NOT NULL DEFAULT FALSE,
     detectable_by_questionnaire BOOLEAN NOT NULL DEFAULT FALSE,
     description                 TEXT,
@@ -87,6 +88,9 @@ CREATE TABLE IF NOT EXISTS skin_concern (
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_skin_concern_name UNIQUE (concern_name)
 );
+
+ALTER TABLE skin_concern
+    ADD COLUMN IF NOT EXISTS skin_concern_display_name VARCHAR(255);
 
 COMMENT ON TABLE skin_concern IS
 'CelRevive skin-concern master. concern_id values include SC0001, SC1001, SC2001, etc.';
@@ -384,15 +388,38 @@ CREATE TABLE IF NOT EXISTS customer_session (
         session_status IN (
             'STARTED',
             'IMAGE_RECEIVED',
+            'PROCESSING',
             'QUESTIONNAIRE_COMPLETED',
             'CONCERNS_COMBINED',
             'RECOMMENDATION_GENERATED',
             'RETURNED_TO_WIDGET',
             'ABANDONED',
+            'VALIDATION_FAILED',
+            'ANALYSIS_FAILED',
             'ERROR'
         )
     )
 );
+
+ALTER TABLE customer_session
+    DROP CONSTRAINT IF EXISTS ck_customer_session_status;
+
+ALTER TABLE customer_session
+    ADD CONSTRAINT ck_customer_session_status CHECK (
+        session_status IN (
+            'STARTED',
+            'IMAGE_RECEIVED',
+            'PROCESSING',
+            'QUESTIONNAIRE_COMPLETED',
+            'CONCERNS_COMBINED',
+            'RECOMMENDATION_GENERATED',
+            'RETURNED_TO_WIDGET',
+            'ABANDONED',
+            'VALIDATION_FAILED',
+            'ANALYSIS_FAILED',
+            'ERROR'
+        )
+    );
 
 COMMENT ON TABLE customer_session IS
 'One CelRevive recommendation-widget execution. Shopify remains the source of truth for authentication, cart, checkout and order transactions.';
@@ -488,6 +515,7 @@ CREATE TABLE IF NOT EXISTS session_skin_concern_detection (
     image_id                   UUID,
     questionnaire_response_id  UUID,
     skin_concern_exists        BOOLEAN NOT NULL,
+    confidence_score           DOUBLE PRECISION,
     if_skin_concern_true_why   TEXT NOT NULL DEFAULT '',
     raw_detection_json         JSONB,
     detected_at                TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -524,11 +552,26 @@ CREATE TABLE IF NOT EXISTS session_skin_concern_detection (
         (detection_source = 'QUESTIONNAIRE'
             AND questionnaire_response_id IS NOT NULL
             AND image_id IS NULL)
+    ),
+
+    CONSTRAINT ck_detection_confidence_score CHECK (
+            confidence_score IS NULL OR confidence_score BETWEEN 0 AND 1
     )
 );
 
+ALTER TABLE session_skin_concern_detection
+    ADD COLUMN IF NOT EXISTS confidence_score DOUBLE PRECISION;
+
+ALTER TABLE session_skin_concern_detection
+    DROP CONSTRAINT IF EXISTS ck_detection_confidence_score;
+
+ALTER TABLE session_skin_concern_detection
+    ADD CONSTRAINT ck_detection_confidence_score CHECK (
+            confidence_score IS NULL OR confidence_score BETWEEN 0 AND 1
+    );
+
 COMMENT ON TABLE session_skin_concern_detection IS
-'Stores the independent visual-AI and questionnaire-LLM detection results, including the exact explanation text supplied by each model.';
+'Stores independent visual-AI and questionnaire-LLM detections, including confidence scores and model explanations.';
 
 -- ---------------------------------------------------------------------------
 -- 6B. COMBINED SKIN CONCERNS

@@ -5,7 +5,7 @@ and explanation-consistency checks.
 """
 import logging
 from typing import List, Set
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 logger = logging.getLogger("celrevive_backend.visual_ai")
 
@@ -13,13 +13,23 @@ logger = logging.getLogger("celrevive_backend.visual_ai")
 SUPPORTED_IMAGE_CONCERNS: Set[str] = {
     f"SC{str(i).zfill(4)}" for i in list(range(1, 20)) + list(range(1001, 1010))
 }
+MIN_CONFIDENCE_SCORE = 0.5
+MAX_DISPLAYED_CONCERNS = 5
 
 
 class ImageSkinConcern(BaseModel):
     skin_concern_id: str
     skin_concern_name: str
     skin_concern_exists: bool
+    confidence_score: float
     if_skin_concern_true_why: str
+
+    @field_validator("confidence_score")
+    @classmethod
+    def validate_confidence_score(cls, confidence_score: float) -> float:
+        if not 0.0 <= confidence_score <= 1.0:
+            raise ValueError("confidence_score must be between 0.0 and 1.0")
+        return confidence_score
 
     @model_validator(mode="after")
     def check_explanation_consistency(self):
@@ -76,8 +86,16 @@ class VisualAIResponse(BaseModel):
 
     @property
     def detected_concerns(self) -> List[ImageSkinConcern]:
-        """Only the concerns flagged True — for 2.6's recommendation response."""
-        return [c for c in self.image_skin_concerns if c.skin_concern_exists]
+        """Return the highest-confidence concerns eligible for frontend display."""
+        eligible = (
+            concern
+            for concern in self.image_skin_concerns
+            if concern.skin_concern_exists and concern.confidence_score > MIN_CONFIDENCE_SCORE
+        )
+        return sorted(
+            eligible,
+            key=lambda concern: (-concern.confidence_score, concern.skin_concern_id),
+        )[:MAX_DISPLAYED_CONCERNS]
 
     @property
     def has_no_visible_concerns(self) -> bool:

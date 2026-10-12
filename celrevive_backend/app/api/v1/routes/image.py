@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.repositories.skin_image_repository import mark_session_validation_failed
 from app.schemas.image_validation import ImageValidationResponse
 from app.services.image_intake_service import accept_validated_image
 from app.services.image_validation import run_full_validation
@@ -36,10 +37,18 @@ async def _validate_and_queue_image(
         get_settings(),
     )
     if not validation.is_valid:
+        try:
+            await mark_session_validation_failed(db, session_id=session_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(exc),
+            ) from exc
         return ImageValidationResponse(
             valid=False,
             message=validation.message,
             reasons=validation.reasons,
+            failure_type="validation_failed",
         )
 
     try:
@@ -68,7 +77,11 @@ async def _validate_and_queue_image(
     )
 
 
-@router.post("/image-validation", response_model=ImageValidationResponse)
+@router.post(
+    "/image-validation",
+    response_model=ImageValidationResponse,
+    response_model_exclude_none=True,
+)
 async def validate_image(
     background_tasks: BackgroundTasks,
     image: UploadFile = File(...),
@@ -81,6 +94,7 @@ async def validate_image(
 @router.post(
     "/image-analysis",
     response_model=ImageValidationResponse,
+    response_model_exclude_none=True,
     status_code=status.HTTP_202_ACCEPTED,
     deprecated=True,
 )

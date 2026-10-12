@@ -66,6 +66,7 @@ COMMENT ON TABLE benefit IS
 CREATE TABLE IF NOT EXISTS skin_concern (
     concern_id                  VARCHAR(10) PRIMARY KEY,
     concern_name                VARCHAR(255) NOT NULL,
+    skin_concern_display_name   VARCHAR(255),
     detectable_by_selfie        BOOLEAN NOT NULL DEFAULT FALSE,
     detectable_by_questionnaire BOOLEAN NOT NULL DEFAULT FALSE,
     description                 TEXT,
@@ -73,6 +74,9 @@ CREATE TABLE IF NOT EXISTS skin_concern (
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_skin_concern_name UNIQUE (concern_name)
 );
+
+ALTER TABLE skin_concern
+    ADD COLUMN IF NOT EXISTS skin_concern_display_name VARCHAR(255);
 
 COMMENT ON TABLE skin_concern IS
 'CelRevive skin-concern master. concern_id values include SC0001, SC1001, SC2001, etc.';

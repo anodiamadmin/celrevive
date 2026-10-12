@@ -1,12 +1,17 @@
 import uuid
 from typing import List
-from sqlalchemy import delete, select
+from sqlalchemy import delete, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.session_skin_concern_detection import SessionSkinConcernDetection
 from app.models.skin_image import SkinImage
-from app.schemas.visual_ai import ImageSkinConcern
+from app.schemas.visual_ai import (
+    MAX_DISPLAYED_CONCERNS,
+    MIN_CONFIDENCE_SCORE,
+    ImageSkinConcern,
+)
 from app.models.skin_concern import SkinConcern
+from app.schemas.customer_session import PrimarySkinConcern
 
 
 async def store_visual_ai_detections(
@@ -43,6 +48,7 @@ async def store_visual_ai_detections(
             image_id=image_id,
             questionnaire_response_id=None,
             skin_concern_exists=detection.skin_concern_exists,
+            confidence_score=detection.confidence_score,
             if_skin_concern_true_why=detection.if_skin_concern_true_why,
             raw_detection_json=raw_response_json,
         )
@@ -55,13 +61,16 @@ async def get_detected_image_concerns_by_session(
     db: AsyncSession,
     *,
     session_id: uuid.UUID,
-) -> List[str]:
+) -> List[PrimarySkinConcern]:
     """
-    Fetches the concern names for all validated IMAGE detections where
-    skin_concern_exists is True for a given session.
+    Fetches at most five IMAGE concerns that exist and exceed the confidence
+    threshold, ordered from highest to lowest confidence.
     """
     stmt = (
-        select(SkinConcern.concern_name)
+        select(
+            SkinConcern.concern_name,
+            SessionSkinConcernDetection.confidence_score,
+        )
         .join(
             SessionSkinConcernDetection,
             SkinConcern.concern_id == SessionSkinConcernDetection.concern_id,
@@ -70,8 +79,19 @@ async def get_detected_image_concerns_by_session(
             SessionSkinConcernDetection.session_id == session_id,
             SessionSkinConcernDetection.detection_source == "IMAGE",
             SessionSkinConcernDetection.skin_concern_exists.is_(True),
+            SessionSkinConcernDetection.confidence_score > MIN_CONFIDENCE_SCORE,
         )
-        .order_by(SkinConcern.concern_id.asc())
+        .order_by(
+            desc(SessionSkinConcernDetection.confidence_score),
+            SkinConcern.concern_id.asc(),
+        )
+        .limit(MAX_DISPLAYED_CONCERNS)
     )
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return [
+        PrimarySkinConcern(
+            concern_name=concern_name,
+            confidence_score=confidence_score,
+        )
+        for concern_name, confidence_score in result.all()
+    ]

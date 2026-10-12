@@ -20,7 +20,7 @@ def test_create_customer_session_persists_session():
     app.dependency_overrides[get_db] = fake_get_db
     try:
         response = TestClient(app).post(
-            "/api/v1/sessions",
+            "/api/v1/create-session",
             json={
                 "shopify_customer_id": "SHOPIFY-CUST-10001",
                 "shopify_customer_email": "customer@example.com",
@@ -33,6 +33,7 @@ def test_create_customer_session_persists_session():
         app.dependency_overrides.clear()
 
     assert response.status_code == 201
+    assert uuid.UUID(response.json()["session_id"])
     assert response.json()["session_status"] == "STARTED"
     session = added_sessions[0]
     assert isinstance(session, CustomerSession)
@@ -55,7 +56,7 @@ def test_create_customer_session_rejects_missing_consent():
     app.dependency_overrides[get_db] = fake_get_db
     try:
         response = TestClient(app).post(
-            "/api/v1/sessions",
+            "/api/v1/create-session",
             json={"consent_given": False},
         )
     finally:
@@ -68,9 +69,15 @@ def test_create_customer_session_rejects_missing_consent():
 
 
 def test_create_customer_session_requires_consent_field():
-    response = TestClient(app).post("/api/v1/sessions", json={})
+    response = TestClient(app).post("/api/v1/create-session", json={})
 
     assert response.status_code == 422
+
+
+def test_old_session_creation_path_is_not_registered():
+    response = TestClient(app).post("/api/v1/sessions", json={"consent_given": True})
+
+    assert response.status_code == 404
 
 
 def test_analysis_status_is_pending_until_worker_finishes():
@@ -101,6 +108,34 @@ def test_analysis_status_is_pending_until_worker_finishes():
     }
 
 
+def test_analysis_status_is_processing_while_worker_runs():
+    session_id = uuid.uuid4()
+    mock_db = Mock()
+    result = Mock()
+    result.scalar_one_or_none.return_value = CustomerSession(
+        session_id=session_id,
+        session_status="PROCESSING",
+    )
+    mock_db.execute = AsyncMock(return_value=result)
+
+    async def fake_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = fake_get_db
+    try:
+        response = TestClient(app).get(f"/api/v1/sessions/{session_id}/analysis")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "session_id": str(session_id),
+        "analysis_status": "processing",
+        "message": "Image analysis is in progress.",
+        "primary_concerns": [],
+    }
+
+
 def test_analysis_status_returns_results_when_complete(monkeypatch):
     session_id = uuid.uuid4()
     mock_db = Mock()
@@ -112,7 +147,14 @@ def test_analysis_status_returns_results_when_complete(monkeypatch):
     mock_db.execute = AsyncMock(return_value=result)
     monkeypatch.setattr(
         "app.api.v1.routes.sessions.get_detected_image_concerns_by_session",
-        AsyncMock(return_value=["Acne"]),
+        AsyncMock(
+            return_value=[
+                {
+                    "concern_name": "Acne",
+                    "confidence_score": 0.87,
+                }
+            ]
+        ),
     )
 
     async def fake_get_db():
@@ -126,7 +168,9 @@ def test_analysis_status_returns_results_when_complete(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["analysis_status"] == "completed"
-    assert response.json()["primary_concerns"] == ["Acne"]
+    assert response.json()["primary_concerns"] == [
+        {"concern_name": "Acne", "confidence_score": 0.87}
+    ]
 
 
 def test_analysis_status_returns_failed_when_worker_fails():
@@ -149,5 +193,52 @@ def test_analysis_status_returns_failed_when_worker_fails():
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    assert response.json()["analysis_status"] == "failed"
+    assert response.json()["analysis_status"] == "analysis_failed"
     assert response.json()["primary_concerns"] == []
+
+
+def test_analysis_status_returns_validation_failed_when_upload_is_rejected():
+    session_id = uuid.uuid4()
+    mock_db = Mock()
+    result = Mock()
+    result.scalar_one_or_none.return_value = CustomerSession(
+        session_id=session_id,
+        session_status="VALIDATION_FAILED",
+    )
+    mock_db.execute = AsyncMock(return_value=result)
+
+    async def fake_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = fake_get_db
+    try:
+        response = TestClient(app).get(f"/api/v1/sessions/{session_id}/analysis")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["analysis_status"] == "validation_failed"
+    assert response.json()["primary_concerns"] == []
+
+
+def test_analysis_status_reports_analysis_failed_for_new_worker_status():
+    session_id = uuid.uuid4()
+    mock_db = Mock()
+    result = Mock()
+    result.scalar_one_or_none.return_value = CustomerSession(
+        session_id=session_id,
+        session_status="ANALYSIS_FAILED",
+    )
+    mock_db.execute = AsyncMock(return_value=result)
+
+    async def fake_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = fake_get_db
+    try:
+        response = TestClient(app).get(f"/api/v1/sessions/{session_id}/analysis")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["analysis_status"] == "analysis_failed"

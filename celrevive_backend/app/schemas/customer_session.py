@@ -20,8 +20,19 @@ class CustomerSessionResponse(BaseModel):
     session_status: str
 
 
+class PrimarySkinConcern(BaseModel):
+    concern_name: str
+    confidence_score: float
+
+
 class ImageAnalysisStatusResponse(BaseModel):
     session_id: uuid.UUID
-    analysis_status: Literal["pending", "completed", "failed"]
+    analysis_status: Literal[
+        "pending",
+        "processing",
+        "completed",
+        "validation_failed",
+        "analysis_failed",
+    ]
     message: str
-    primary_concerns: list[str] = Field(default_factory=list)
+    primary_concerns: list[PrimarySkinConcern] = Field(default_factory=list)

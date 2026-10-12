@@ -21,6 +21,13 @@ logger = logging.getLogger("visual_ai_task")
 async def run_visual_ai_analysis(image_id: uuid.UUID, session_id: uuid.UUID) -> None:
     async with AsyncSessionLocal() as db:
         try:
+            await db.execute(
+                update(CustomerSession)
+                .where(CustomerSession.session_id == session_id)
+                .values(session_status="PROCESSING", updated_at=text("CURRENT_TIMESTAMP"))
+            )
+            await db.commit()
+
             image_bytes, mime_type = await get_image_bytes_and_mime(db, image_id=image_id)
 
             result = await asyncio.to_thread(call_visual_ai, image_bytes, mime_type)
@@ -64,7 +71,7 @@ async def _mark_analysis_failed(
         await db.execute(
             update(CustomerSession)
             .where(CustomerSession.session_id == session_id)
-            .values(session_status="ERROR", updated_at=text("CURRENT_TIMESTAMP"))
+            .values(session_status="ANALYSIS_FAILED", updated_at=text("CURRENT_TIMESTAMP"))
         )
         await db.commit()
     except Exception:

@@ -1,7 +1,7 @@
 """Response/domain models for the image-validation flow (work item 1.1 / 1.3)."""
 
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -38,6 +38,7 @@ class ImageValidationResult(BaseModel):
 class ImageValidationResponse(BaseModel):
     valid: bool
     message: str
+    failure_type: Literal["validation_failed"] | None = None
     # Kept out of the default frontend message but included for debugging/logging on the client if needed
     reasons: List[RejectionReason] = Field(default_factory=list)
     image_id: Optional[str] = None
