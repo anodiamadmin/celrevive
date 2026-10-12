@@ -111,6 +111,8 @@ ON CONFLICT (concern_id) DO UPDATE SET
     detectable_by_questionnaire = EXCLUDED.detectable_by_questionnaire,
     updated_at = CURRENT_TIMESTAMP;
 
+\ir 'CelRevive_DML_Skin_Concern_Display_Names.sql';
+
 -- ---------------------------------------------------------------------------
 -- 4. base
 -- Current DDL stores a compact subset of the source workbook's base fields.
