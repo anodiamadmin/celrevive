@@ -260,10 +260,10 @@ export default function CapturePhoto({ onSubmit }) {
           </div>
 
           <div className="flex items-center justify-between gap-3 p-4">
-            <button type="button" onClick={cancelCrop} className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[var(--border)] text-red-500 hover:bg-[var(--code-bg)]">
+            <button type="button" onClick={cancelCrop} aria-label="Cancel crop" className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[var(--border)] text-red-500 hover:bg-[var(--code-bg)]">
               <X className="h-[20px] w-[20px]" />
             </button>
-            <button type="button" onClick={confirmCrop} className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[var(--text-h)] text-[var(--bg)] hover:opacity-90">
+            <button type="button" onClick={confirmCrop} aria-label="Confirm crop" className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[var(--text-h)] text-[var(--bg)] hover:opacity-90">
               <Check className="h-[20px] w-[20px]" />
             </button>
           </div>
