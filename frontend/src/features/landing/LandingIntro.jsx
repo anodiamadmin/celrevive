@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { createSession } from '../../api';
+import { useSessionStore } from '../../store/useSessionStore.js';
 import localHeroImg from '../../assets/skin-analysis.png';
 
 export default function LandingIntro({ onStartAssessment }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConsentGiven, setIsConsentGiven] = useState(false);
+  const setSessionId = useSessionStore((state) => state.setSessionId);
 
   // Extract the Shopify CDN image URL, falling back to local import for localhost dev
   const widgetRoot = document.getElementById('ai-skin-assessment');
@@ -14,9 +17,11 @@ export default function LandingIntro({ onStartAssessment }) {
     setIsSubmitting(true);
 
     try {
-      const dummySessionId = crypto.randomUUID(); 
-      sessionStorage.setItem('session_id', dummySessionId);
-      console.log("Mock Session ID saved to storage:", dummySessionId);
+      // Call the real API to generate a session
+      const { session_id } = await createSession(isConsentGiven); 
+      
+      setSessionId(session_id);
+      console.log("Session ID saved to storage:", session_id);
 
       if (onStartAssessment) {
         onStartAssessment();
@@ -49,12 +54,12 @@ export default function LandingIntro({ onStartAssessment }) {
             <div className="rounded-[4px] bg-[var(--code-bg)] p-[18px]">
               <span className="mb-1 block text-[15px] font-bold tracking-[0.5px] text-[var(--text)]">STEP 2</span>
               <h3 className="mb-1 text-[18px] font-bold text-[var(--text-h)]">Analyze</h3>
-              <p className="m-0 text-[14px] leading-snug">AI instantly analyzes skin conditions.</p>
+              <p className="m-0 text-[14px] leading-snug">AI analyzes skin conditions.</p>
             </div>
             <div className="rounded-[4px] bg-[var(--code-bg)] p-[18px]">
               <span className="mb-1 block text-[15px] font-bold tracking-[0.5px] text-[var(--text)]">STEP 3</span>
               <h3 className="mb-1 text-[18px] font-bold text-[var(--text-h)]">Consult</h3>
-              <p className="m-0 text-[14px] leading-snug">AI asks specific questions.</p>
+              <p className="m-0 text-[14px] leading-snug">Answer specific questions.</p>
             </div>
             <div className="rounded-[4px] bg-[var(--code-bg)] p-[18px]">
               <span className="mb-1 block text-[15px] font-bold tracking-[0.5px] text-[var(--text)]">FINAL STEP</span>

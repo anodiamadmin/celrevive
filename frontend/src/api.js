@@ -1,44 +1,69 @@
-// api.js
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**
- * Fetches AI recommendations from the backend.
- * Since the AI runs as a background task, this function polls the endpoint
- * and waits until the data is ready (Max timeout: 40 seconds).
+ * 1. Creates a secure session for the user journey.
  */
-export const fetchAIRecommendation = async (sessionId, userName = 'Valued Customer') => {
-  let retries = 20; // Increased to 20 retries (20 * 2s = 40 seconds) to give AI enough time
+export const createSession = async (consentGiven = true) => {
+  const res = await fetch(`${API_BASE_URL}/create-session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ consent_given: consentGiven })
+  });
 
-  while (retries > 0) {
-    try {
-      // URL encode the username to safely handle spaces
-      const res = await fetch(`${API_BASE_URL}/recommendation/${sessionId}?user_full_name=${encodeURIComponent(userName)}`);
-      
-      if (res.ok) {
-        // Status 200: Data successfully received!
-        const data = await res.json();
-        return data; 
-      } else if (res.status === 404) {
-        // Status 404: AI is still processing. Wait for 2 seconds before the next retry.
-        console.log(`AI is still processing... retries left: ${retries - 1}`);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        retries--;
-      } else {
-        // Handle other backend errors (e.g., 500 Internal Server Error)
-        const errorText = await res.text();
-        console.error(`Backend error details:`, errorText);
-        throw new Error(`Backend returned an error: ${res.status}`);
-      }
-    } catch (err) {
-      console.error('Fetch attempt failed:', err);
-      if (retries <= 1) {
-        throw err;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      retries--;
-    }
+  if (!res.ok) throw new Error('Failed to create secure session');
+  return res.json();
+};
+
+/**
+ * 2. Uploads and validates the image quality.
+ */
+export const validateImage = async (imageFile, sessionId) => {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  formData.append('session_id', sessionId);
+  
+  const res = await fetch(`${API_BASE_URL}/image-validation`, {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!res.ok) throw new Error('Image validation service unavailable');
+  return res.json();
+};
+
+/**
+ * 3. Polls the backend until the async image analysis is completed.
+ * Includes a timeout safeguard to prevent infinite looping.
+ */
+export const pollImageAnalysis = async (sessionId, attempts = 0) => {
+  const MAX_ATTEMPTS = 120; // 120 attempts * 2.5 seconds = 300 seconds (5 minutes) total timeout
+
+  if (attempts >= MAX_ATTEMPTS) {
+    throw new Error('Analysis is taking longer than expected. Please refresh the page or try again.');
   }
 
-  // If no data is received after all retries are exhausted
-  throw new Error('AI processing took too long. Please try again.');
+  const timestamp = new Date().getTime();
+  
+  const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/analysis?_t=${timestamp}`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'ngrok-skip-browser-warning': 'true' 
+    }
+  });
+  
+  if (!res.ok) throw new Error('Failed to retrieve analysis status');
+  const data = await res.json();
+
+  if (data.analysis_status === 'completed' || data.analysis_status === 'COMPLETED') {
+    return {
+      primary_concerns: (data.primary_concerns || []).map(c => c.concern_name || c)
+    };
+  } else if (data.analysis_status === 'error' || data.analysis_status === 'ERROR') {
+    throw new Error(data.error_message || 'AI analysis failed during processing.');
+  } else {
+    // PENDING, PROCESSING, etc.: Wait 2.5 seconds and poll again, incrementing the attempt counter
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    return pollImageAnalysis(sessionId, attempts + 1);
+  }
 };

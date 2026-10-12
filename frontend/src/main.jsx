@@ -8,5 +8,3 @@ createRoot(document.getElementById('ai-skin-assessment')).render(
     <App />
   </StrictMode>,
 )
-
-

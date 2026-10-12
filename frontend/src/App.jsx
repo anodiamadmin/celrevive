@@ -1,58 +1,45 @@
 import { useState, useEffect } from 'react';
 import LandingIntro from './features/landing/LandingIntro';
-import PersonalInfo from './features/personalInfo/PersonalInfo';
 import CapturePhoto from './features/camera/CapturePhoto';
-import Questionnaire from './features/questionnaire/Questionnaire';
-import LoadingScreen from './features/recommendation/LoadingScreen';
 import RecommendationPage from './features/recommendation/RecommendationPage';
+import { useSessionStore } from './store/useSessionStore.js';
 
 function App() {
-  const [step, setStep] = useState('landing');
-  const [personalInfo, setPersonalInfo] = useState(null);
-  const [photo, setPhoto] = useState(null);
-  const [answers, setAnswers] = useState(null);
-  const [analysisResult, setAnalysisResult] = useState(null);
+  const currentStep = useSessionStore((state) => state.currentStep);
+  const setStep = useSessionStore((state) => state.setStep);
+
   const [shopifyUser, setShopifyUser] = useState(null);
 
   useEffect(() => {
-    setShopifyUser({
-      firstName: 'Azad Ansari',
-      customerId: 'shop_123456789' 
-    });
+    const widgetRoot = document.getElementById('ai-skin-assessment');
+    
+    if (widgetRoot) {
+      const { customerFirstName, customerId } = widgetRoot.dataset;
+      
+      setShopifyUser({
+        firstName: customerFirstName || null,
+        customerId: customerId || null
+      });
+    }
   }, []);
 
   return (
-
-    // <div id="ai-skin-assessment" className="pt-[120px] min-h-screen">   // to be removed after testing
-    <div className="flex flex-col min-h-screen w-full">
-      {/* 1. Landing Page */}
-      {step === 'landing' && (
+    <div className="flex min-h-screen w-full flex-col">
+      {currentStep === 'landing' && (
         <LandingIntro onStartAssessment={() => setStep('camera')} />
       )}
 
-      {/* 3. Camera / Photo Capture */}
-      {step === 'camera' && (
+      {currentStep === 'camera' && (
         <CapturePhoto
-          onSubmit={(imageDataUrl, sessionId, backendData) => {
-            setPhoto(imageDataUrl);
-            console.log("App.jsx received backendData:", backendData);
-            
-            if (backendData) {
-              setAnalysisResult(backendData); 
-            }
+          onSubmit={() => {
             setStep('recommendation');
           }}
         />
       )}
 
-      {/* 6. Recommendation Page */}
-      {step === 'recommendation' && (
-        <RecommendationPage 
-          result={analysisResult} 
-          shopifyUser={shopifyUser}
-        />
+      {currentStep === 'recommendation' && (
+        <RecommendationPage shopifyUser={shopifyUser} />
       )}
-      
     </div>
   );
 }
