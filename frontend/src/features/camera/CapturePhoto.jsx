@@ -11,7 +11,7 @@ import localSelfieCapturePhoto from '../../assets/selfie-capture.png';
 
 const TRUST_ITEMS = [
   { icon: ShieldKeyhole, label: 'Private & secure' },
-  { icon: MonitorSmartphone, label: 'In-hand tool' },
+  { icon: MonitorSmartphone, label: 'On-hand tool' },
   { icon: BriefcaseMedical, label: 'Backed by Dermatologists' },
   { icon: Bot, label: 'AI-powered accuracy' },
 ];
@@ -59,8 +59,7 @@ function TopLayerModal({ isOpen, children }) {
         width: '100vw', 
         height: '100dvh',
         maxWidth: '100vw', 
-        maxHeight: '100dvh',
-        zIndex: 999999
+        maxHeight: '100dvh' 
       }}
     >
       {isOpen && (
@@ -140,8 +139,8 @@ export default function CapturePhoto({ onSubmit }) {
 
   return (
     <div className="flex w-full flex-col bg-[var(--bg)]">
-      {/* --- Main Screen (CSS Variables are safe here) --- */}
       <div className="flex w-full shrink-0 flex-col items-center justify-center px-4 py-5">
+        
         <div className="mb-4 w-full text-center">
           <h1 className="m-0 text-[20px] font-bold leading-tight text-[var(--text-h)] sm:text-[24px] md:text-[28px]">
             Capture a Photo of Your Affected Skin Area or Take a Selfie!
@@ -205,8 +204,6 @@ export default function CapturePhoto({ onSubmit }) {
         </div>
       </div>
 
-      {/* --- Modals (CSS Variables are stripped out here, use Hardcoded values) --- */}
-
       <TopLayerModal isOpen={stage === 'camera'}>
         <div className="relative h-full w-full overflow-hidden bg-black">
           <button type="button" onClick={closeCamera} className="absolute right-6 top-6 z-30 flex h-[44px] w-[44px] items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
@@ -216,148 +213,65 @@ export default function CapturePhoto({ onSubmit }) {
           <video ref={videoRef} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`} />
           
           <div className="absolute inset-x-0 bottom-0 z-30 flex items-center justify-center gap-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-6 py-12">
-            <button type="button" onClick={openGallery} className="flex h-[56px] w-[56px] items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md transition-transform hover:scale-105 active:scale-95" title="Open Gallery">
+            <button 
+              type="button" 
+              onClick={openGallery} 
+              className="flex h-[56px] w-[56px] items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md transition-transform hover:scale-105 active:scale-95"
+              title="Open Gallery"
+            >
               <ImageIcon className="h-[24px] w-[24px]" strokeWidth={2} />
             </button>
-            <button type="button" onClick={capturePhoto} className="flex h-[80px] w-[80px] items-center justify-center rounded-full border-4 border-white bg-white/20 transition-transform active:scale-95 shadow-lg" title="Capture Photo" />
-            <button type="button" onClick={flipCamera} disabled={isFlipping} className={`flex h-[56px] w-[56px] items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-white backdrop-blur-md transition-all ${isFlipping ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`} title="Flip Camera">
+
+            <button 
+              type="button" 
+              onClick={capturePhoto} 
+              className="flex h-[80px] w-[80px] items-center justify-center rounded-full border-4 border-white bg-white/20 transition-transform active:scale-95 shadow-lg" 
+              title="Capture Photo"
+            />
+
+            <button 
+              type="button" 
+              onClick={flipCamera} 
+              disabled={isFlipping} 
+              className={`flex h-[56px] w-[56px] items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-white backdrop-blur-md transition-all ${
+                isFlipping ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'
+              }`}
+              title="Flip Camera"
+            >
               <RefreshCw className={`h-[24px] w-[24px] ${isFlipping ? 'animate-spin' : ''}`} strokeWidth={2} />
             </button>
           </div>
         </div>
       </TopLayerModal>
 
-      <TopLayerModal isOpen={stage === 'crop' && Boolean(capturedImage)}>
-        {/* Hardcoded bg-white to guarantee visibility */}
-        <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-white">
-          
-          <div 
-            ref={cropContainerRef} 
-            style={{ 
-              width: '100%',
-              height: 'auto',
-              aspectRatio: '3 / 4', 
-              position: 'relative', 
-              overflow: 'hidden',
-              backgroundColor: '#000000',
-              touchAction: 'none',
-              margin: 0,
-              padding: 0
-            }}
-          >
-            <img 
-              ref={cropImageRef} 
-              src={capturedImage} 
-              alt="Crop preview" 
-              draggable={false} 
-              style={{
-                position: 'absolute', // Forced stacking context separation
-                top: 0,
-                left: 0,
-                display: 'block',
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                pointerEvents: 'none',
-                zIndex: 1, // Stay beneath crop box
-                margin: 0,
-                padding: 0
-              }}
-            />
+      <TopLayerModal isOpen={stage === 'crop' && capturedImage}>
+        <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-[var(--bg)]">
+          <div ref={cropContainerRef} className="relative aspect-[3/4] w-full touch-none select-none overflow-hidden bg-black">
+            <img ref={cropImageRef} src={capturedImage} alt="Crop preview" className="pointer-events-none block h-full w-full object-contain" draggable={false} />
 
-            <div 
-              onPointerDown={handleCropDragStart} 
-              style={{ 
-                position: 'absolute',
-                left: `${cropBox.x}%`, 
-                top: `${cropBox.y}%`, 
-                width: `${cropBox.w}%`, 
-                height: `${cropBox.h}%`,
-                borderWidth: '2px', 
-                borderStyle: 'solid', 
-                borderColor: '#ffffff', // Hardcoded hex ignores CSS resets
-                boxSizing: 'border-box', 
-                boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)', 
-                cursor: 'move',
-                zIndex: 10, // Stay above image
-                display: 'block',
-                margin: 0,
-                padding: 0
-              }}
-            >
-              {/* Corner Handles - Hardcoded hex colors and undefined layout values bypass Shopify overrides */}
+            <div onPointerDown={handleCropDragStart} className="absolute cursor-move border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]" style={{ left: `${cropBox.x}%`, top: `${cropBox.y}%`, width: `${cropBox.w}%`, height: `${cropBox.h}%` }}>
               {['nw', 'ne', 'sw', 'se'].map(dir => (
-                <div 
-                  key={dir} 
-                  onPointerDown={(e) => handleCropResizeStart(e, dir)} 
-                  style={{ 
-                    position: 'absolute',
-                    width: '20px', 
-                    height: '20px', 
-                    borderRadius: '50%',
-                    borderWidth: '2px',
-                    borderStyle: 'solid', 
-                    borderColor: '#000000', 
-                    backgroundColor: '#ffffff',
-                    boxSizing: 'border-box',
-                    cursor: `${dir}-resize`,
-                    zIndex: 20,
-                    top: dir.includes('n') ? '-10px' : undefined,
-                    bottom: dir.includes('s') ? '-10px' : undefined,
-                    left: dir.includes('w') ? '-10px' : undefined,
-                    right: dir.includes('e') ? '-10px' : undefined,
-                    display: 'block',
-                    margin: 0,
-                    padding: 0
-                  }} 
-                />
+                <div key={dir} onPointerDown={(e) => handleCropResizeStart(e, dir)} className={`absolute ${dir.includes('n') ? '-top-2' : '-bottom-2'} ${dir.includes('w') ? '-left-2' : '-right-2'} h-[20px] w-[20px] cursor-${dir}-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]`} />
               ))}
-              
-              {/* Edge Handles */}
               {['n', 's', 'w', 'e'].map(dir => (
-                <div 
-                  key={dir} 
-                  onPointerDown={(e) => handleCropResizeStart(e, dir)} 
-                  style={{ 
-                    position: 'absolute',
-                    width: '20px', 
-                    height: '20px', 
-                    borderRadius: '50%',
-                    borderWidth: '2px',
-                    borderStyle: 'solid', 
-                    borderColor: '#000000', 
-                    backgroundColor: '#ffffff',
-                    boxSizing: 'border-box',
-                    cursor: `${dir}-resize`,
-                    zIndex: 20,
-                    top: dir === 'n' ? '-10px' : dir === 's' ? undefined : '50%',
-                    bottom: dir === 's' ? '-10px' : undefined,
-                    left: dir === 'w' ? '-10px' : dir === 'e' ? undefined : '50%',
-                    right: dir === 'e' ? '-10px' : undefined,
-                    transform: (dir === 'w' || dir === 'e') ? 'translateY(-50%)' : 'translateX(-50%)',
-                    display: 'block',
-                    margin: 0,
-                    padding: 0
-                  }}
-                />
+                <div key={dir} onPointerDown={(e) => handleCropResizeStart(e, dir)} className={`absolute ${dir === 'n' || dir === 's' ? 'left-1/2 -translate-x-1/2' : 'top-1/2 -translate-y-1/2'} ${dir === 'n' ? '-top-2' : dir === 's' ? '-bottom-2' : dir === 'w' ? '-left-2' : '-right-2'} h-[20px] w-[20px] cursor-${dir}-resize rounded-full border-2 border-[var(--text-h)] bg-[var(--bg)]`} />
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 p-4 bg-white">
-            <button type="button" onClick={cancelCrop} className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-gray-300 text-red-500 hover:bg-gray-100">
+          <div className="flex items-center justify-between gap-3 p-4">
+            <button type="button" onClick={cancelCrop} className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[var(--border)] text-red-500 hover:bg-[var(--code-bg)]">
               <X className="h-[20px] w-[20px]" />
             </button>
-            <button type="button" onClick={confirmCrop} className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-black text-white hover:opacity-90">
+            <button type="button" onClick={confirmCrop} className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[var(--text-h)] text-[var(--bg)] hover:opacity-90">
               <Check className="h-[20px] w-[20px]" />
             </button>
           </div>
         </div>
       </TopLayerModal>
 
-      <TopLayerModal isOpen={stage === 'preview' && Boolean(capturedImage)}>
-        {/* Hardcoded bg-white and standard text colors to bypass CSS variable resets in <dialog> */}
-        <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-white">
+      <TopLayerModal isOpen={stage === 'preview' && capturedImage}>
+        <div className="w-full max-w-[448px] overflow-hidden rounded-xl bg-[var(--bg)]">
           <img src={capturedImage} alt="Captured preview" className="max-h-[60vh] w-full object-contain" />
 
           {validationError && (
@@ -366,11 +280,11 @@ export default function CapturePhoto({ onSubmit }) {
             </div>
           )}
 
-          <div className="flex gap-3 p-4 bg-white">
-            <button type="button" onClick={handleRetake} disabled={isValidating || isOpeningCamera} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-300 py-3 font-semibold text-black hover:bg-gray-100 disabled:opacity-50">
+          <div className="flex gap-3 p-4">
+            <button type="button" onClick={handleRetake} disabled={isValidating || isOpeningCamera} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-3 font-semibold text-[var(--text-h)] hover:bg-[var(--code-bg)] disabled:opacity-50">
               <RotateCcw className="h-[16px] w-[16px]" /> Retake
             </button>
-            <button type="button" onClick={submitPhoto} disabled={isValidating} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-black py-3 font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" onClick={submitPhoto} disabled={isValidating} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text-h)] py-3 font-semibold text-[var(--bg)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
               {isValidating ? <><RefreshCw className="h-[16px] w-[16px] animate-spin" /> {loadingText || 'Checking...'}</> : <><Check className="h-[16px] w-[16px]" /> Submit</>}
             </button>
           </div>
