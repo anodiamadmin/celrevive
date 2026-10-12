@@ -1,0 +1,13 @@
+SELECT
+    d.session_id,
+    d.concern_id,
+    c.concern_name,
+    c.skin_concern_display_name,
+    d.if_skin_concern_true_why,
+    d.confidence_score
+FROM public.session_skin_concern_detection d
+JOIN public.skin_concern c
+    ON c.concern_id = d.concern_id
+WHERE d.session_id = 'd1f45140-2e9d-4782-b6f5-d39359055bfa'
+  AND d.confidence_score >= 0.5
+ORDER BY d.confidence_score DESC;
