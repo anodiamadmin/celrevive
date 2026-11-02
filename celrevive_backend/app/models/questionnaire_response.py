@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, TIMESTAMP, text
+from sqlalchemy import ForeignKey, String, TIMESTAMP, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,7 +15,9 @@ class QuestionnaireResponse(Base):
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("customer_session.session_id", ondelete="CASCADE"),
+        nullable=False,
     )
     questionnaire_version: Mapped[str] = mapped_column(String(50), nullable=False)
     response_json: Mapped[dict] = mapped_column(JSONB, nullable=False)

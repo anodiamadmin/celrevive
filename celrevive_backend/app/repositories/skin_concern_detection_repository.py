@@ -63,9 +63,16 @@ async def get_detected_image_concerns_by_session(
     session_id: uuid.UUID,
 ) -> List[PrimarySkinConcern]:
     """
-    Fetches at most five IMAGE concerns that exist and exceed the confidence
-    threshold, ordered from highest to lowest confidence.
+    Fetches at most five concerns from the latest image that exist and exceed
+    the confidence threshold, ordered from highest to lowest confidence.
     """
+    latest_image_id = (
+        select(SkinImage.image_id)
+        .where(SkinImage.session_id == session_id)
+        .order_by(desc(SkinImage.uploaded_at), desc(SkinImage.image_id))
+        .limit(1)
+        .scalar_subquery()
+    )
     stmt = (
         select(
             func.coalesce(
@@ -81,6 +88,7 @@ async def get_detected_image_concerns_by_session(
         .where(
             SessionSkinConcernDetection.session_id == session_id,
             SessionSkinConcernDetection.detection_source == "IMAGE",
+            SessionSkinConcernDetection.image_id == latest_image_id,
             SessionSkinConcernDetection.skin_concern_exists.is_(True),
             SessionSkinConcernDetection.confidence_score > MIN_CONFIDENCE_SCORE,
         )

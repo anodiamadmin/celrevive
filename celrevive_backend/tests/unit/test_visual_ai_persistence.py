@@ -184,9 +184,14 @@ async def test_worker_opens_own_session_and_persists_validated_result():
             new=AsyncMock(return_value=(b"bytes", "image/jpeg")),
         ), \
         patch("app.workers.visual_ai_task.call_visual_ai", return_value=result) as call_visual_ai_mock:
-        await run_visual_ai_analysis(image_id, session_id)
+        with patch(
+            "app.workers.visual_ai_task.complete_recommendation_if_ready",
+            new=AsyncMock(),
+        ) as finalize_mock:
+            await run_visual_ai_analysis(image_id, session_id)
 
     call_visual_ai_mock.assert_called_once_with(b"bytes", "image/jpeg")
+    finalize_mock.assert_awaited_once()
     assert len(db.rows) == 28
     assert db.commit_count == 2
     assert "update customer_session" in str(db.executed[0]).lower()

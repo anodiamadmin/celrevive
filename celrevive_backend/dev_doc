@@ -23,3 +23,25 @@ should use /api/v1/image-validation.
 
 Add background workers as services for production instead of asyncio worker - test shopify's timeout sensitivity 
 Make sure images are uploaded only once from shopify frontend . Will be accessed by the backend workers via reference token from the storage.
+
+Questionnaire and recommendation workflow:
+1. After an accepted image, submit POST /api/v1/sessions/{session_id}/questionnaire
+   with questionnaire_version and response_json. response_json must contain the
+   complete questionnaire_user_answer.json shape with user_response values filled.
+   The backend stores a canonical, template-validated copy before returning 202.
+2. The questionnaire analysis and formulation run asynchronously alongside image
+   analysis. The questionnaire LLM returns one result per questionnaire-detectable
+   concern. Skin type and sensitivity output are checked against q1 and q3.
+3. Once both source analyses are complete, the backend combines results by
+   skin_concern_id using logical OR, stores each source flag and the source-labelled
+   explanation in session_skin_concern, then retrieves mappings, active scores,
+   candidate bases/actives, and compatible base-active pairs for the formulation LLM.
+4. Poll GET /api/v1/sessions/{session_id}/recommendation. It returns the structured
+   recommendation when ready, 409 while processing, and 502 when the workflow failed.
+5. Recommendation actives are rejected unless every detected concern is covered by
+   a selected active and each selected active is compatible with the selected base.
+
+The workflow depends on the Step-3/Step-4 tables and views in
+../architecture/database/CelRevive_DDL_updated.sql. Configure GEMINI_API_KEY and,
+optionally, QUESTIONNAIRE_AI_MODEL and FORMULATION_AI_MODEL (both default to
+gemini-2.5-flash).

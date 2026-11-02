@@ -14,6 +14,7 @@ from app.services.visual_ai.client import (
 )
 from app.repositories.skin_concern_detection_repository import store_visual_ai_detections
 from app.repositories.skin_image_repository import get_image_bytes_and_mime  # fetches from storage_uri
+from app.workers.recommendation_task import complete_recommendation_if_ready
 
 logger = logging.getLogger("visual_ai_task")
 
@@ -47,6 +48,7 @@ async def run_visual_ai_analysis(image_id: uuid.UUID, session_id: uuid.UUID) -> 
                 detections=result.validated.image_skin_concerns,
                 raw_response_json=result.raw,
             )
+            await complete_recommendation_if_ready(db, session_id=session_id)
 
             logger.info(
                 "Visual AI analysis stored image_id=%s session_id=%s detected=%d",
