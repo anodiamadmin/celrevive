@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecommendationPage from '../src/features/recommendation/RecommendationPage';
 import { pollImageAnalysis } from '../src/api';
@@ -114,5 +114,54 @@ describe('RecommendationPage Component', () => {
     render(<RecommendationPage />); // No props
     
     expect(await screen.findByText(/Primary Concerns/i)).toBeInTheDocument();
+  });
+
+  test('11. prevents state update on unmount during successful polling (isMounted guard)', async () => {
+    let resolveApi;
+    pollImageAnalysis.mockReturnValue(new Promise((res) => { resolveApi = res; }));
+
+    const { unmount } = render(<RecommendationPage shopifyUser={null} />);
+    
+    // Unmount the component before the API promise resolves
+    unmount();
+    
+    // Resolve the promise. The internal 'if (isMounted)' guard prevents the state setter from firing.
+    // If it fired, React would throw an unmounted component state update warning.
+    await act(async () => {
+      resolveApi({ primary_concerns: ['Acne'] });
+    });
+  });
+
+  test('12. prevents state update on unmount during failed polling (isMounted guard)', async () => {
+    let rejectApi;
+    pollImageAnalysis.mockReturnValue(new Promise((_, rej) => { rejectApi = rej; }));
+
+    const { unmount } = render(<RecommendationPage shopifyUser={null} />);
+    
+    // Unmount the component before the API promise rejects
+    unmount();
+    
+    // Reject the promise. The internal 'if (isMounted)' guard prevents the error state setter from firing.
+    await act(async () => {
+      rejectApi(new Error('Aborted'));
+    });
+  });
+
+  test('13. falls back to empty object if API strictly resolves with null data', async () => {
+    // Explicitly returning null tests the 'const data = result || {};' fallback branch
+    pollImageAnalysis.mockResolvedValue(null);
+    render(<RecommendationPage shopifyUser={null} />);
+    
+    // Validates the fallback name and empty concerns block successfully rendered
+    expect(await screen.findByText(/Hello Customer!/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your Skin is Looking Great!/i)).toBeInTheDocument();
+  });
+
+  test('14. uses fallback error string if rejected exception lacks a message property', async () => {
+    // Rejecting with a raw string rather than an Error object to test the err.message fallback logic
+    pollImageAnalysis.mockRejectedValue('Raw string error');
+    render(<RecommendationPage shopifyUser={null} />);
+    
+    expect(await screen.findByText(/An error occurred during analysis./i)).toBeInTheDocument();
   });
 });
