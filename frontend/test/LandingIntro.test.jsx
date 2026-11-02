@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LandingIntro from '../src/features/landing/LandingIntro';
 import { createSession } from '../src/api';
@@ -128,5 +128,48 @@ describe('LandingIntro Component', () => {
     await waitFor(() => {
       expect(createSession).toHaveBeenCalledTimes(1);
     });
+  });
+
+  test('7. explicitly tests early return guards by bypassing React disabled state', async () => {
+    const mockOnStart = jest.fn();
+    
+    // Stall the API so we can test the "isSubmitting" state
+    let resolveApi;
+    createSession.mockReturnValueOnce(new Promise((res) => { resolveApi = res; }));
+
+    render(<LandingIntro onStartAssessment={mockOnStart} />);
+    const button = screen.getByRole('button', { name: /begin assessment/i });
+
+    // HACK: React blocks onClick on disabled buttons. We extract the internal 
+    // React prop directly from the DOM node to forcefully trigger the function.
+    const forceClick = (element) => {
+      const reactPropKey = Object.keys(element).find((key) => 
+        key.startsWith('__reactProps$') || key.startsWith('__reactEventHandlers$')
+      );
+      element[reactPropKey].onClick();
+    };
+
+    // --- GUARD 1: Test the !isConsentGiven branch ---
+    // Button is disabled, so we forcefully invoke the handler
+    forceClick(button);
+    expect(createSession).not.toHaveBeenCalled();
+
+    // --- GUARD 2: Test the isSubmitting branch ---
+    // Give consent to enable the button normally
+    const checkbox = screen.getByRole('checkbox', { name: /I agree to share my image/i });
+    await userEvent.click(checkbox);
+
+    // Standard click to start the submission (sets isSubmitting = true)
+    await userEvent.click(button);
+    expect(createSession).toHaveBeenCalledTimes(1);
+
+    // Now it is submitting and disabled again. Forcefully invoke the handler again.
+    forceClick(button);
+    
+    // The API call count should still be exactly 1, proving the internal JS guard blocked it
+    expect(createSession).toHaveBeenCalledTimes(1);
+
+    // Resolve the promise to clean up the test environment
+    resolveApi({ session_id: '123' });
   });
 });

@@ -165,7 +165,8 @@ export function useImageCapture() {
       let newX = Math.min(Math.max(state.startBox.x + dxPercent, 0), 100 - state.startBox.w);
       let newY = Math.min(Math.max(state.startBox.y + dyPercent, 0), 100 - state.startBox.h);
       setCropBox((prev) => ({ ...prev, x: newX, y: newY }));
-    } else if (state.mode === 'resize') {
+    } 
+    if (state.mode === 'resize') {
       let { x, y, w, h } = state.startBox;
 
       if (state.dir.includes('e')) w = Math.min(Math.max(w + dxPercent, MIN_CROP_SIZE_PERCENT), 100 - x);
