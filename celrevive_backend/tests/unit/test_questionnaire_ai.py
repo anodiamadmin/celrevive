@@ -40,15 +40,25 @@ def completed_questionnaire() -> dict:
     return payload
 
 
-def model_payload() -> dict:
+def model_payload(detected_ids: set[str] | None = None) -> dict:
     template = json.loads(DETECTION_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    if detected_ids is None:
+        detected_ids = {"SC0001", "SC0002"}
     return {
         "skin_type": "dry",
         "sensitivity_level": "none",
         "questionnaire_skin_concerns": [
             {
                 **concern,
-                "confidence_score": 0.0,
+                "skin_concern_exists": concern["skin_concern_id"] in detected_ids,
+                "confidence_score": (
+                    0.8 if concern["skin_concern_id"] in detected_ids else 0.0
+                ),
+                "if_skin_concern_true_why": (
+                    "Dryness or dehydration was selected in the questionnaire."
+                    if concern["skin_concern_id"] in detected_ids
+                    else ""
+                ),
             }
             for concern in template["questionnaire_skin_concerns"]
         ],
@@ -97,9 +107,56 @@ def test_questionnaire_ai_returns_complete_typed_concern_set(mock_client, _setti
     assert analysis.skin_type == "dry"
     assert analysis.sensitivity_level == "none"
     assert len(analysis.questionnaire_skin_concerns) == 23
-    assert all(not concern.skin_concern_exists for concern in analysis.questionnaire_skin_concerns)
+    detected_ids = {
+        concern.skin_concern_id
+        for concern in analysis.questionnaire_skin_concerns
+        if concern.skin_concern_exists
+    }
+    assert detected_ids == {"SC0001", "SC0002"}
     config = mock_client.return_value.models.generate_content.call_args.kwargs["config"]
     assert config.response_schema is not None
+
+
+@patch(
+    "app.services.questionnaire_ai.client.get_settings",
+    return_value=SimpleNamespace(
+        GEMINI_API_KEY="test-key",
+        QUESTIONNAIRE_AI_MODEL="test-model",
+    ),
+)
+@patch("app.services.questionnaire_ai.client.genai.Client")
+def test_questionnaire_ai_rejects_missing_directly_supported_concern(
+    mock_client, _settings
+):
+    payload = model_payload({"SC0001"})
+    mock_client.return_value.models.generate_content.return_value.text = json.dumps(payload)
+
+    with pytest.raises(
+        QuestionnaireMalformedResponseError,
+        match="omitted directly supported.*SC0002",
+    ):
+        call_questionnaire_ai(completed_questionnaire())
+
+
+@patch(
+    "app.services.questionnaire_ai.client.get_settings",
+    return_value=SimpleNamespace(
+        GEMINI_API_KEY="test-key",
+        QUESTIONNAIRE_AI_MODEL="test-model",
+    ),
+)
+@patch("app.services.questionnaire_ai.client.genai.Client")
+def test_questionnaire_ai_rejects_concern_without_direct_support(
+    mock_client, _settings
+):
+    payload = model_payload({"SC0001", "SC0002", "SC0006"})
+    mock_client.return_value.models.generate_content.return_value.text = json.dumps(payload)
+
+    with pytest.raises(
+        QuestionnaireMalformedResponseError,
+        match="without direct questionnaire support.*SC0006",
+    ):
+        call_questionnaire_ai(completed_questionnaire())
 
 
 @patch(

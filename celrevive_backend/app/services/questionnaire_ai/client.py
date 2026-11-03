@@ -223,7 +223,46 @@ def _all_questions(response_json: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return questions
 
 
+def _directly_supported_concern_ids(response_json: dict[str, Any]) -> set[str]:
+    questions = _all_questions(response_json)
+    concern_ids: set[str] = set()
+
+    skin_type_concerns = {
+        "Dry": {"SC0001"},
+        "Oily": {"SC0010"},
+        "Combination/Oily": {"SC0010"},
+        "Sensitive": {"SC0004"},
+        "Mature/Ageing": {"SC0011"},
+    }
+    concern_ids.update(
+        skin_type_concerns.get(questions["q1"]["user_response"], set())
+    )
+
+    current_concern_ids = {
+        "Dryness or dehydration": {"SC0001", "SC0002"},
+        "Redness or irritation": {"SC0005", "SC2001"},
+        "Acne or breakouts": {"SC0008", "SC0009"},
+        "Oiliness": {"SC0010"},
+        "Skin sensitivity/reactivity": {"SC0004", "SC0007"},
+        "Rosacea": {"SC0006"},
+        "Uneven skin tone or pigmentation": {"SC0012", "SC0013"},
+        "Dullness": {"SC0015"},
+        "Itching or flaking": {"SC2001"},
+    }
+    for answer in questions["q2"]["user_response"]:
+        concern_ids.update(current_concern_ids.get(answer, set()))
+
+    if questions["q3"]["user_response"] in {
+        "Yes — highly sensitive/reactive",
+        "Yes — mildly sensitive",
+    }:
+        concern_ids.update({"SC0004", "SC0007"})
+
+    return concern_ids
+
+
 def call_questionnaire_ai(response_json: dict[str, Any]) -> tuple[dict[str, Any], QuestionnaireAnalysis]:
+    response_json = validate_questionnaire_payload(response_json)
     template = _read_json(DETECTION_TEMPLATE_PATH)
     settings = get_settings()
     if not settings.GEMINI_API_KEY:
@@ -291,6 +330,24 @@ def call_questionnaire_ai(response_json: dict[str, Any]) -> tuple[dict[str, Any]
             raise ValueError("LLM skin_type does not match the submitted q1 answer")
         if analysis.sensitivity_level != _expected_sensitivity(response_json):
             raise ValueError("LLM sensitivity_level does not match the submitted q3 answer")
+        directly_supported_ids = _directly_supported_concern_ids(response_json)
+        detected_ids = {
+            entry.skin_concern_id
+            for entry in analysis.questionnaire_skin_concerns
+            if entry.skin_concern_exists
+        }
+        unsupported_ids = detected_ids - directly_supported_ids - {"SC2002"}
+        missing_ids = directly_supported_ids - detected_ids
+        if unsupported_ids:
+            raise ValueError(
+                "LLM marked concerns without direct questionnaire support: "
+                + ", ".join(sorted(unsupported_ids))
+            )
+        if missing_ids:
+            raise ValueError(
+                "LLM omitted directly supported questionnaire concerns: "
+                + ", ".join(sorted(missing_ids))
+            )
     except (TypeError, json.JSONDecodeError, ValidationError, ValueError, KeyError) as exc:
         logger.error("Questionnaire AI response failed validation: %s", exc)
         raise QuestionnaireMalformedResponseError(str(exc)) from exc
