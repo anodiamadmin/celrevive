@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CelRevive — AI Skin Analysis Inspector</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #faf9f6; color: #111827; font-family: Inter, system-ui, -apple-system, sans-serif; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-white border-b border-stone-200 px-6 py-4 sticky top-0 z-20">
+    <div class="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center font-bold text-lg">
+          CR
+        </div>
+        <div>
+          <h1 class="text-lg font-semibold text-stone-900 leading-tight">
+            CelRiv Admin Dashboard
+          </h1>
+          <p class="text-xs text-stone-500">
+            Upload a photo on the store and click Refresh to inspect AI results
+          </p>
+        </div>
+      </div>
+
+      <!-- Client-Friendly Action Bar (Zero UUIDs) -->
+      <div class="flex items-center gap-3">
+        <input
+          type="text"
+          id="concern-search-input"
+          oninput="applyClientFilters()"
+          placeholder="Search concerns (e.g. Redness, Acne)..."
+          class="w-64 px-3 py-1.5 text-sm border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-800 bg-stone-50"
+        />
+        <a
+          href="/admin"
+          class="inline-flex items-center gap-2 px-4 py-1.5 bg-stone-900 hover:bg-stone-800 text-white text-sm font-medium rounded-lg transition shadow-sm"
+        >
+          <span>🔄</span> Refresh
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Split Layout -->
+  <div class="max-w-[1440px] mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+
+    <!-- LEFT SIDEBAR: Visual History of Uploaded Photos -->
+    <aside class="lg:col-span-3 bg-white border border-stone-200 rounded-2xl shadow-sm flex flex-col overflow-hidden max-h-[86vh]">
+      <div class="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/60">
+        <div>
+          <h2 class="text-sm font-semibold text-stone-900">Recent Face Scans</h2>
+          <p class="text-xs text-stone-500">Click any photo to view AI breakdown</p>
+        </div>
+        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-stone-200 text-stone-700">
+          {{ recent_sessions | length }}
+        </span>
+      </div>
+
+      <div class="divide-y divide-stone-100 overflow-y-auto custom-scroll flex-1">
+        {% if recent_sessions %}
+          {% for item in recent_sessions %}
+            {% set is_active = (item._internal_id == selected_ref) %}
+            <a
+              href="/admin?ref={{ item._internal_id }}"
+              class="flex items-center gap-3.5 p-3.5 transition hover:bg-stone-50 {% if is_active %}bg-stone-100/90 border-l-4 border-stone-900{% endif %}"
+            >
+              <!-- Mini Selfie Thumbnail -->
+              <div class="w-12 h-14 rounded-lg overflow-hidden bg-stone-100 border border-stone-200 shrink-0 flex items-center justify-center">
+                {% if item.image_id %}
+                  <img
+                    src="/admin/image/{{ item.image_id }}"
+                    alt="{{ item.scan_label }}"
+                    class="w-full h-full object-cover"
+                  />
+                {% else %}
+                  <span class="text-base text-stone-400">📷</span>
+                {% endif %}
+              </div>
+
+              <!-- Scan Number, Timestamp & Customer Label -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="text-xs font-bold text-stone-900">
+                    {{ item.scan_label }}
+                    {% if loop.first %}
+                      <span class="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-stone-900 text-white">LATEST</span>
+                    {% endif %}
+                  </span>
+                  <span class="text-[11px] font-semibold {% if item.flagged_concerns_count > 0 %}text-emerald-700{% else %}text-stone-400{% endif %}">
+                    {{ item.flagged_concerns_count }} flagged
+                  </span>
+                </div>
+
+                <div class="text-xs text-stone-500 truncate">
+                  {% if item.created_at %}
+                    {{ item.created_at.strftime('%b %d, %Y • %I:%M %p') }}
+                  {% else %}
+                    Just now
+                  {% endif %}
+                </div>
+
+                <div class="flex items-center justify-between mt-1">
+                  <span class="text-[11px] text-stone-400 truncate max-w-[125px]">
+                    👤 {{ item.customer_label }}
+                  </span>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded font-medium
+                    {% if item.session_status in ['RECOMMENDATION_GENERATED', 'CONCERNS_COMBINED'] %}
+                      bg-emerald-50 text-emerald-700
+                    {% elif item.session_status in ['VALIDATION_FAILED', 'ANALYSIS_FAILED', 'ERROR'] %}
+                      bg-red-50 text-red-700
+                    {% else %}
+                      bg-amber-50 text-amber-700
+                    {% endif %}
+                  ">
+                    {{ item.session_status }}
+                  </span>
+                </div>
+              </div>
+            </a>
+          {% endfor %}
+        {% else %}
+          <div class="p-8 text-center text-sm text-stone-500">
+            No scans recorded yet. Upload a test photo on the Shopify store to see results here.
+          </div>
+        {% endif %}
+      </div>
+    </aside>
+
+    <!-- RIGHT PANEL: Selected Photo & AI Diagnostic Inspector -->
+    <main class="lg:col-span-9 flex flex-col gap-6">
+      {% if selected_session %}
+
+        <!-- Top Card: Uploaded Selfie + Assessment Summary + Filter Controls -->
+        <section class="bg-white border border-stone-200 rounded-2xl shadow-sm p-5">
+          <div class="flex flex-col md:flex-row gap-6 items-start">
+
+            <!-- Uploaded Image Preview Box -->
+            <div class="w-full md:w-48 shrink-0">
+              {% if latest_image %}
+                <div class="aspect-[4/5] w-full rounded-xl overflow-hidden bg-stone-100 border border-stone-200 relative group">
+                  <img
+                    src="/admin/image/{{ latest_image.image_id }}"
+                    alt="Uploaded Customer Selfie"
+                    class="w-full h-full object-cover"
+                  />
+                  <a
+                    href="/admin/image/{{ latest_image.image_id }}"
+                    target="_blank"
+                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-medium"
+                  >
+                    View Full Photo ↗
+                  </a>
+                </div>
+              {% else %}
+                <div class="aspect-[4/5] w-full rounded-xl bg-stone-100 border border-dashed border-stone-300 flex flex-col items-center justify-center p-4 text-center">
+                  <span class="text-2xl mb-1">📷</span>
+                  <span class="text-xs font-medium text-stone-600">No Photo Uploaded</span>
+                  <span class="text-[11px] text-stone-400 mt-0.5">Waiting for camera submission</span>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Assessment Metadata & Live Filter Controls -->
+            <div class="flex-1 w-full flex flex-col justify-between gap-4">
+              <div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-base font-bold text-stone-900">
+                      {{ active_scan_label }}
+                    </span>
+                    <span class="text-xs text-stone-500">
+                      {% if selected_session.created_at %}
+                        • {{ selected_session.created_at.strftime('%B %d, %Y at %I:%M %p UTC') }}
+                      {% endif %}
+                    </span>
+                  </div>
+                  <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                    Stage: {{ selected_session.session_status }}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                  <div class="p-3 rounded-xl bg-stone-50 border border-stone-200/80">
+                    <div class="text-[11px] text-stone-500">Customer</div>
+                    <div class="text-sm font-semibold text-stone-900 mt-0.5 truncate">
+                      {{ active_customer_label }}
+                    </div>
+                  </div>
+                  <div class="p-3 rounded-xl bg-stone-50 border border-stone-200/80">
+                    <div class="text-[11px] text-stone-500">Concerns Matching Filter</div>
+                    <div class="text-sm font-semibold text-stone-900 mt-0.5">
+                      <span id="visible-count">0</span> of {{ image_detections | length }} evaluated
+                    </div>
+                  </div>
+                  <div class="p-3 rounded-xl bg-stone-50 border border-stone-200/80">
+                    <div class="text-[11px] text-stone-500">Photo Quality</div>
+                    <div class="text-sm font-semibold text-stone-900 mt-0.5">
+                      {% if latest_image and latest_image.image_width and latest_image.image_height %}
+                        {{ latest_image.image_width }} × {{ latest_image.image_height }} px
+                      {% elif selected_session.session_status == 'VALIDATION_FAILED' %}
+                        Rejected by Quality Gate
+                      {% else %}
+                        Pending Upload
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interactive Filter Bar -->
+              <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
+                  <label for="confidence-slider" class="text-xs font-semibold text-stone-700 whitespace-nowrap">
+                    Min Confidence Score:
+                    <span id="confidence-badge" class="ml-1 px-2 py-0.5 rounded bg-stone-900 text-white font-mono">
+                      {{ (default_min_confidence * 100)|int }}% ({{ "%.2f"|format(default_min_confidence) }})
+                    </span>
+                  </label>
+                  <input
+                    id="confidence-slider"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value="{{ default_min_confidence }}"
+                    class="w-full sm:w-48 accent-stone-900 cursor-pointer"
+                    oninput="applyClientFilters()"
+                  />
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4">
+                  <label class="inline-flex items-center gap-2 text-xs font-medium text-stone-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      id="only-detected-toggle"
+                      class="rounded border-stone-300 text-stone-900 focus:ring-stone-800"
+                      onchange="applyClientFilters()"
+                    />
+                    Show Only Detected
+                  </label>
+
+                  <button
+                    type="button"
+                    onclick="resetToDefaultFilter()"
+                    class="text-xs underline text-stone-600 hover:text-stone-900"
+                  >
+                    Reset (&ge; 50%)
+                  </button>
+
+                  <button
+                    type="button"
+                    onclick="exportVisibleRowsToCsv()"
+                    class="px-3 py-1.5 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-xs font-medium text-stone-800 shadow-sm transition"
+                  >
+                    ⬇ Download CSV
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- Diagnostic Results Section with Interactive Tabs -->
+        <section class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
+          <div class="px-5 py-4 border-b border-stone-200 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-semibold text-stone-900">
+                AI Diagnostic Results Breakdown
+              </h3>
+              <p class="text-xs text-stone-500">
+                Ordered from highest to lowest confidence score
+              </p>
+            </div>
+
+            <!-- Interactive Stage Tabs -->
+            <div class="flex flex-wrap items-center gap-1.5 bg-stone-100 p-1 rounded-lg text-xs">
+              <button
+                type="button"
+                onclick="switchTab('image')"
+                id="tab-btn-image"
+                class="tab-btn px-3 py-1.5 rounded-md bg-white text-stone-900 font-semibold shadow-sm transition"
+              >
+                📸 Photo AI ({{ image_detections | length }})
+              </button>
+              <button
+                type="button"
+                onclick="switchTab('questionnaire')"
+                id="tab-btn-questionnaire"
+                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition"
+              >
+                📋 Questionnaire AI ({{ questionnaire_detections | length }})
+              </button>
+              <button
+                type="button"
+                onclick="switchTab('combined')"
+                id="tab-btn-combined"
+                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition"
+              >
+                🔗 Combined Concerns ({{ combined_concerns | length }})
+              </button>
+              <button
+                type="button"
+                onclick="switchTab('formula')"
+                id="tab-btn-formula"
+                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition"
+              >
+                🧪 Formula Recommendation {% if recommendation_detail %}(Ready){% endif %}
+              </button>
+            </div>
+          </div>
+
+          <!-- TAB 1: PHOTO AI DETECTIONS -->
+          <div id="tab-panel-image" class="tab-panel">
+            {% if image_detections %}
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                      <th class="py-3 px-4">Client Display Name</th>
+                      <th class="py-3 px-4">Clinical Name</th>
+                      <th class="py-3 px-4">AI Verdict</th>
+                      <th class="py-3 px-4 w-44">Confidence Score</th>
+                      <th class="py-3 px-4 min-w-[320px]">AI Visual Reasoning (`if_skin_concern_true_why`)</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-stone-100 text-sm">
+                    {% for row in image_detections %}
+                      <tr
+                        class="detection-row hover:bg-stone-50/80 transition"
+                        data-confidence="{{ row.confidence_score }}"
+                        data-exists="{{ 'true' if row.skin_concern_exists else 'false' }}"
+                        data-concern-id="{{ row.concern_id }}"
+                        data-concern-name="{{ row.concern_name }}"
+                        data-display-name="{{ row.skin_concern_display_name }}"
+                        data-why="{{ row.if_skin_concern_true_why }}"
+                      >
+                        <td class="py-3.5 px-4 align-top font-semibold text-stone-900">
+                          {{ row.skin_concern_display_name }}
+                        </td>
+                        <td class="py-3.5 px-4 align-top">
+                          <span class="font-medium text-stone-700">{{ row.concern_name }}</span>
+                          <span class="ml-1.5 font-mono text-[11px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 border border-stone-200">
+                            {{ row.concern_id }}
+                          </span>
+                        </td>
+                        <td class="py-3.5 px-4 align-top">
+                          {% if row.skin_concern_exists %}
+                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              ● Detected
+                            </span>
+                          {% else %}
+                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
+                              ○ Not Present
+                            </span>
+                          {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 align-top">
+                          <div class="flex items-center justify-between text-xs font-mono mb-1">
+                            <span class="font-bold text-stone-900">{{ row.confidence_pct }}%</span>
+                            <span class="text-stone-400">({{ "%.2f"|format(row.confidence_score) }})</span>
+                          </div>
+                          <div class="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
+                            <div
+                              class="h-full rounded-full {% if row.confidence_score >= 0.75 %}bg-emerald-500{% elif row.confidence_score >= 0.5 %}bg-amber-500{% else %}bg-stone-400{% endif %}"
+                              style="width: {{ row.confidence_pct }}%;"
+                            ></div>
+                          </div>
+                        </td>
+                        <td class="py-3.5 px-4 align-top text-stone-700 leading-relaxed">
+                          {% if row.if_skin_concern_true_why %}
+                            {{ row.if_skin_concern_true_why }}
+                          {% else %}
+                            <span class="text-stone-400 italic text-xs">
+                              Concern was not visibly detected on the face.
+                            </span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <div id="no-filter-matches" class="hidden p-10 text-center text-sm text-stone-500">
+                No skin concerns match your current filter. Drag the <strong>Min Confidence Score</strong> slider to <strong>0%</strong> to inspect all 28 concerns.
+              </div>
+            {% else %}
+              <div class="p-12 text-center">
+                <p class="text-base font-medium text-stone-700 mb-1">
+                  Photo AI Analysis in Progress or Not Submitted Yet
+                </p>
+                <p class="text-xs text-stone-500 max-w-md mx-auto">
+                  If you just uploaded a selfie on the store, wait 5–10 seconds for Gemini Vision AI to finish and click <strong>Refresh</strong> above.
+                </p>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- TAB 2: QUESTIONNAIRE AI DETECTIONS -->
+          <div id="tab-panel-questionnaire" class="tab-panel hidden">
+            {% if questionnaire_detections %}
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                      <th class="py-3 px-4">Client Display Name</th>
+                      <th class="py-3 px-4">Clinical Name</th>
+                      <th class="py-3 px-4">Verdict</th>
+                      <th class="py-3 px-4 w-44">Confidence</th>
+                      <th class="py-3 px-4 min-w-[320px]">Questionnaire AI Reasoning</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-stone-100 text-sm">
+                    {% for row in questionnaire_detections %}
+                      <tr class="hover:bg-stone-50/80">
+                        <td class="py-3.5 px-4 align-top font-semibold text-stone-900">{{ row.skin_concern_display_name }}</td>
+                        <td class="py-3.5 px-4 align-top">
+                          <span class="font-medium text-stone-700">{{ row.concern_name }}</span>
+                          <span class="ml-1.5 font-mono text-[11px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 border border-stone-200">{{ row.concern_id }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 align-top">
+                          {% if row.skin_concern_exists %}
+                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">● Supported</span>
+                          {% else %}
+                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">○ Not Reported</span>
+                          {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 align-top font-mono text-xs font-bold text-stone-900">
+                          {{ row.confidence_pct }}% ({{ "%.2f"|format(row.confidence_score) }})
+                        </td>
+                        <td class="py-3.5 px-4 align-top text-stone-700">
+                          {{ row.if_skin_concern_true_why or '—' }}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="p-12 text-center text-sm text-stone-500">
+                No questionnaire submitted for this scan yet.
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- TAB 3: COMBINED CONCERNS (IMAGE OR QUESTIONNAIRE) -->
+          <div id="tab-panel-combined" class="tab-panel hidden">
+            {% if combined_concerns %}
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                      <th class="py-3 px-4">Concern</th>
+                      <th class="py-3 px-4">Photo AI</th>
+                      <th class="py-3 px-4">Questionnaire</th>
+                      <th class="py-3 px-4">Final Combined (`OR`)</th>
+                      <th class="py-3 px-4 min-w-[320px]">Combined Explanation</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-stone-100 text-sm">
+                    {% for row in combined_concerns %}
+                      <tr class="hover:bg-stone-50/80">
+                        <td class="py-3.5 px-4 align-top font-semibold text-stone-900">
+                          {{ row.skin_concern_display_name }}
+                          <span class="ml-1 font-mono text-[11px] text-stone-400">({{ row.concern_id }})</span>
+                        </td>
+                        <td class="py-3.5 px-4 align-top">{{ '✅ Yes' if row.image_skin_concern_exists else '—' }}</td>
+                        <td class="py-3.5 px-4 align-top">{{ '✅ Yes' if row.questionnaire_skin_concern_exists else '—' }}</td>
+                        <td class="py-3.5 px-4 align-top font-semibold">
+                          {% if row.skin_concern_exists %}
+                            <span class="text-emerald-700">● Active Concern</span>
+                          {% else %}
+                            <span class="text-stone-400">○ False</span>
+                          {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 align-top text-stone-700">{{ row.if_skin_concern_true_why or '—' }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="p-12 text-center text-sm text-stone-500">
+                Combined concerns are generated automatically once both the Photo and Questionnaire steps complete.
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- TAB 4: RECOMMENDED BASE & ACTIVES FORMULA -->
+          <div id="tab-panel-formula" class="tab-panel hidden p-6">
+            {% if recommendation_detail %}
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-5 rounded-xl bg-stone-50 border border-stone-200">
+                  <div class="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1">Selected Base Formula</div>
+                  <div class="text-lg font-bold text-stone-900 mb-2">
+                    {{ recommendation_detail.recommended_base.base_name }}
+                  </div>
+                  <p class="text-sm text-stone-700 leading-relaxed">
+                    {{ recommendation_detail.recommended_base.if_base_selected_why }}
+                  </p>
+                </div>
+
+                <div class="p-5 rounded-xl bg-stone-50 border border-stone-200">
+                  <div class="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1">Overall Formulation Summary</div>
+                  <p class="text-sm text-stone-700 leading-relaxed">
+                    {{ recommendation_detail.overall_explanation }}
+                  </p>
+                  {% if recommendation_detail.safety_notice %}
+                    <div class="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                      <strong>Safety Notice:</strong> {{ recommendation_detail.safety_notice }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <h4 class="text-sm font-semibold text-stone-900 mt-6 mb-3">Recommended Active Ingredients</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for active in recommendation_detail.recommended_actives %}
+                  <div class="p-4 rounded-xl border border-stone-200 bg-white shadow-sm">
+                    <div class="font-semibold text-stone-900 mb-1">{{ active.active_name }}</div>
+                    <p class="text-xs text-stone-600 leading-relaxed">{{ active.if_active_selected_why }}</p>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="p-8 text-center text-sm text-stone-500">
+                Formulation recommendation has not been generated for this session yet.
+              </div>
+            {% endif %}
+          </div>
+
+        </section>
+
+      {% else %}
+        <div class="bg-white border border-stone-200 rounded-2xl p-12 text-center my-auto">
+          <h2 class="text-lg font-semibold text-stone-800 mb-2">No Scans Recorded Yet</h2>
+          <p class="text-sm text-stone-500">
+            Upload a test photo in the Shopify Skin Assessment widget, then refresh this page.
+          </p>
+        </div>
+      {% endif %}
+    </main>
+  </div>
+
+  <script>
+    function applyClientFilters() {
+      const slider = document.getElementById('confidence-slider');
+      const onlyDetectedToggle = document.getElementById('only-detected-toggle');
+      const searchInput = document.getElementById('concern-search-input');
+      if (!slider) return;
+
+      const minScore = parseFloat(slider.value);
+      const onlyDetected = onlyDetectedToggle ? onlyDetectedToggle.checked : false;
+      const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+      const badge = document.getElementById('confidence-badge');
+      if (badge) {
+        badge.textContent = `${Math.round(minScore * 100)}% (${minScore.toFixed(2)})`;
+      }
+
+      const rows = document.querySelectorAll('.detection-row');
+      let visibleCount = 0;
+
+      rows.forEach((row) => {
+        const score = parseFloat(row.getAttribute('data-confidence') || '0');
+        const exists = row.getAttribute('data-exists') === 'true';
+        const textContent = (
+          (row.getAttribute('data-display-name') || '') + ' ' +
+          (row.getAttribute('data-concern-name') || '') + ' ' +
+          (row.getAttribute('data-concern-id') || '') + ' ' +
+          (row.getAttribute('data-why') || '')
+        ).toLowerCase();
+
+        const passesScore = score >= minScore;
+        const passesExists = !onlyDetected || exists;
+        const passesSearch = !searchTerm || textContent.includes(searchTerm);
+
+        if (passesScore && passesExists && passesSearch) {
+          row.classList.remove('hidden');
+          visibleCount += 1;
+        } else {
+          row.classList.add('hidden');
+        }
+      });
+
+      const visibleCountEl = document.getElementById('visible-count');
+      if (visibleCountEl) {
+        visibleCountEl.textContent = visibleCount;
+      }
+
+      const emptyBanner = document.getElementById('no-filter-matches');
+      if (emptyBanner && rows.length > 0) {
+        emptyBanner.classList.toggle('hidden', visibleCount > 0);
+      }
+    }
+
+    function resetToDefaultFilter() {
+      const slider = document.getElementById('confidence-slider');
+      const onlyDetectedToggle = document.getElementById('only-detected-toggle');
+      const searchInput = document.getElementById('concern-search-input');
+      if (slider) slider.value = 0.5;
+      if (onlyDetectedToggle) onlyDetectedToggle.checked = false;
+      if (searchInput) searchInput.value = '';
+      applyClientFilters();
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-panel').forEach((el) => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.classList.remove('bg-white', 'text-stone-900', 'font-semibold', 'shadow-sm');
+        btn.classList.add('text-stone-600', 'font-medium');
+      });
+
+      const panel = document.getElementById(`tab-panel-${tabName}`);
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      if (panel) panel.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.remove('text-stone-600', 'font-medium');
+        activeBtn.classList.add('bg-white', 'text-stone-900', 'font-semibold', 'shadow-sm');
+      }
+    }
+
+    function exportVisibleRowsToCsv() {
+      const rows = Array.from(document.querySelectorAll('.detection-row'))
+        .filter((r) => !r.classList.contains('hidden'));
+
+      const headers = [
+        'skin_concern_display_name',
+        'concern_name',
+        'concern_id',
+        'skin_concern_exists',
+        'confidence_score',
+        'if_skin_concern_true_why'
+      ];
+
+      const escapeCsv = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+
+      const csvLines = [headers.join(',')];
+      rows.forEach((r) => {
+        csvLines.push([
+          escapeCsv(r.getAttribute('data-display-name')),
+          escapeCsv(r.getAttribute('data-concern-name')),
+          escapeCsv(r.getAttribute('data-concern-id')),
+          escapeCsv(r.getAttribute('data-exists')),
+          escapeCsv(r.getAttribute('data-confidence')),
+          escapeCsv(r.getAttribute('data-why')),
+        ].join(','));
+      });
+
+      const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `celrevive_ai_scan_results.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.addEventListener('DOMContentLoaded', applyClientFilters);
+  </script>
+</body>
+</html>

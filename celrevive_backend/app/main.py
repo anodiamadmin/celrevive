@@ -16,7 +16,9 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
+from app.api.v1.routes.admin_dashboard import router as admin_dashboard_router
 from app.api.v1.routes.image import router as image_router
 from app.api.v1.routes.sessions import router as sessions_router
 
@@ -37,6 +39,13 @@ app.add_middleware(
 
 app.include_router(image_router, prefix="/api/v1", tags=["image-analysis"])
 app.include_router(sessions_router, prefix="/api/v1", tags=["sessions"])
+app.include_router(admin_dashboard_router)
+
+
+@app.get("/", include_in_schema=False)
+def root_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/admin")
+
 
 @app.get("/health")
 def health_check() -> dict:
