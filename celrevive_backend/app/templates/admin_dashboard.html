@@ -5,22 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CelRevive — AI Skin Analysis Inspector</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lock down Tailwind so it never leaks global preflight resets into Shopify -->
+  <script>
+    tailwind.config = {
+      important: '#celriv-admin-root',
+      corePlugins: {
+        preflight: false,
+      },
+    };
+  </script>
+  <!-- SheetJS for native .xlsx Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    body { background-color: #faf9f6; color: #111827; font-family: Inter, system-ui, -apple-system, sans-serif; }
-    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    #celriv-admin-root {
+      background-color: #faf9f6;
+      color: #111827;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      box-sizing: border-box;
+    }
+    #celriv-admin-root *,
+    #celriv-admin-root *::before,
+    #celriv-admin-root *::after {
+      box-sizing: border-box;
+      border-width: 0;
+      border-style: solid;
+      border-color: #e7e5e4;
+    }
+    #celriv-admin-root h1,
+    #celriv-admin-root h2,
+    #celriv-admin-root h3,
+    #celriv-admin-root h4,
+    #celriv-admin-root p {
+      margin: 0;
+    }
+    #celriv-admin-root a {
+      color: inherit;
+      text-decoration: none;
+    }
+    #celriv-admin-root button,
+    #celriv-admin-root input {
+      font-family: inherit;
+    }
+    #celriv-admin-root .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    #celriv-admin-root .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body style="margin: 0; padding: 0;">
+
+{# Unified macro so status pills look identical in Sidebar, Header, Drawer, and Modal #}
+{% macro render_status_pill(status, extra_classes='') %}
+  <span class="inline-block text-[10px] px-2 py-0.5 rounded font-medium border {{ extra_classes }}
+    {% if status in ['RECOMMENDATION_GENERATED', 'CONCERNS_COMBINED'] %}
+      bg-emerald-50 text-emerald-700 border-emerald-200
+    {% elif status in ['VALIDATION_FAILED', 'ANALYSIS_FAILED', 'ERROR'] %}
+      bg-red-50 text-red-700 border-red-200
+    {% else %}
+      bg-amber-50 text-amber-700 border-amber-200
+    {% endif %}
+  ">
+    {{ status }}
+  </span>
+{% endmacro %}
+
+<div id="celriv-admin-root" class="min-h-screen flex flex-col">
 
   <!-- Top Navigation Header -->
   <header class="bg-white border-b border-stone-200 px-4 sm:px-6 py-3.5 sm:py-4 sticky top-0 z-30">
     <div class="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-<!--          <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center font-bold text-lg shrink-0">-->
-<!--            CR-->
-<!--          </div>-->
           <div>
             <h1 class="text-base sm:text-lg font-semibold text-stone-900 leading-tight">
               CelRiv Admin Dashboard
@@ -46,9 +99,9 @@
         <button
           type="button"
           onclick="toggleMobileScansDrawer(true)"
-          class="lg:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-100 text-stone-800 text-xs font-semibold shrink-0 shadow-xs"
+          class="lg:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-100 text-stone-800 text-xs font-semibold shrink-0 shadow-xs cursor-pointer"
         >
-          <span>📂</span> Scans ({{ recent_sessions | length }})
+          <span>📂</span> See all scans ({{ recent_sessions | length }})
         </button>
 
         <input
@@ -84,29 +137,27 @@
             <div>
               <div class="flex flex-wrap items-center gap-2">
                 <h3 class="text-base font-semibold text-stone-900">
-                  AI Diagnostic Results Breakdown
+                  AI Assessment Breakdown
                 </h3>
                 <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-stone-900 text-white">
                   {{ active_scan_label }}
                 </span>
-                <span class="text-xs font-medium px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 border border-stone-200">
-                  {{ selected_session.session_status }}
-                </span>
+                {{ render_status_pill(selected_session.session_status) }}
               </div>
               <p class="text-xs text-stone-500 mt-0.5">
                 Ordered from highest to lowest confidence score
                 {% if selected_session.created_at %}
-                  • {{ selected_session.created_at.strftime('%b %d, %Y at %I:%M %p UTC') }}
+                  • <span class="local-timestamp" data-utc="{{ selected_session.created_at.isoformat() }}" data-format="full">{{ selected_session.created_at.strftime('%b %d, %Y • %I:%M %p') }}</span>
                 {% endif %}
               </p>
             </div>
 
-            <!-- Action Controls: Expand Photo Modal, Detected Filter & CSV Export -->
+            <!-- Action Controls: Expand Photo Modal, Detected Filter & Export Dropdown -->
             <div class="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onclick="openScanModal()"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-xs font-semibold text-stone-800 border border-stone-200/80 transition"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-xs font-semibold text-stone-800 border border-stone-200/80 transition cursor-pointer"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 3h6m0 0v6m0-6L14 10M9 21H3m0 0v-6m0 6l7-7" />
@@ -124,13 +175,39 @@
                 Show Only Detected
               </label>
 
-              <button
-                type="button"
-                onclick="exportVisibleRowsToCsv()"
-                class="px-3 py-1.5 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-xs font-medium text-stone-800 shadow-sm transition"
-              >
-                ⬇ CSV
-              </button>
+              <!-- Export Dropdown (Excel .xlsx & CSV .csv) -->
+              <div class="relative" id="export-dropdown-container">
+                <button
+                  type="button"
+                  onclick="toggleExportMenu(event)"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-xs font-medium text-stone-800 shadow-sm transition cursor-pointer"
+                >
+                  <span>⬇ Export</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-stone-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <div
+                  id="export-dropdown-menu"
+                  class="hidden absolute right-0 mt-1.5 w-48 rounded-xl bg-white border border-stone-200 shadow-lg py-1 z-40"
+                >
+                  <button
+                    type="button"
+                    onclick="exportVisibleRows('xlsx')"
+                    class="w-full text-left px-3.5 py-2 text-xs font-medium text-stone-800 hover:bg-stone-100 flex items-center gap-2 cursor-pointer bg-transparent"
+                  >
+                    <span>📊</span> Export as Excel (.xlsx)
+                  </button>
+                  <button
+                    type="button"
+                    onclick="exportVisibleRows('csv')"
+                    class="w-full text-left px-3.5 py-2 text-xs font-medium text-stone-800 hover:bg-stone-100 flex items-center gap-2 cursor-pointer bg-transparent"
+                  >
+                    <span>📄</span> Export as CSV (.csv)
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -141,7 +218,7 @@
                 type="button"
                 onclick="switchTab('image')"
                 id="tab-btn-image"
-                class="tab-btn px-3 py-1.5 rounded-md bg-white text-stone-900 font-semibold shadow-sm transition"
+                class="tab-btn px-3 py-1.5 rounded-md bg-white text-stone-900 font-semibold shadow-sm transition cursor-pointer"
               >
                 📸 Visual AI ({{ image_detections | length }})
               </button>
@@ -149,7 +226,7 @@
                 type="button"
                 onclick="switchTab('questionnaire')"
                 id="tab-btn-questionnaire"
-                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition"
+                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition cursor-pointer bg-transparent"
               >
                 📋 Questionnaire AI ({{ questionnaire_detections | length }})
               </button>
@@ -157,7 +234,7 @@
                 type="button"
                 onclick="switchTab('combined')"
                 id="tab-btn-combined"
-                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition"
+                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition cursor-pointer bg-transparent"
               >
                 🔗 Combined Concerns ({{ combined_concerns | length }})
               </button>
@@ -165,7 +242,7 @@
                 type="button"
                 onclick="switchTab('formula')"
                 id="tab-btn-formula"
-                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition"
+                class="tab-btn px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 font-medium transition cursor-pointer bg-transparent"
               >
                 🧪 Formula Recommendation {% if recommendation_detail %}(Ready){% endif %}
               </button>
@@ -179,11 +256,12 @@
                 <table class="w-full text-left border-collapse">
                   <thead>
                     <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
-                      <th class="py-3 px-3 sm:px-4">Client Display Name</th>
+                      <th class="py-3 px-3 sm:px-4 w-28">Concern ID</th>
+                      <th class="py-3 px-3 sm:px-4">Display Name</th>
                       <th class="py-3 px-3 sm:px-4">Clinical Name</th>
                       <th class="py-3 px-3 sm:px-4">AI Verdict</th>
                       <th class="py-3 px-3 sm:px-4 w-36 sm:w-44">Confidence Score</th>
-                      <th class="py-3 px-3 sm:px-4 min-w-[260px] sm:min-w-[320px]">AI Visual Reasoning (`if_skin_concern_true_why`)</th>
+                      <th class="py-3 px-3 sm:px-4 min-w-[260px] sm:min-w-[320px]">Visual AI Reasoning</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-stone-100 text-sm">
@@ -197,14 +275,16 @@
                         data-display-name="{{ row.skin_concern_display_name }}"
                         data-why="{{ row.if_skin_concern_true_why }}"
                       >
+                        <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top whitespace-nowrap">
+                          <span class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200">
+                            {{ row.concern_id }}
+                          </span>
+                        </td>
                         <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top font-semibold text-stone-900">
                           {{ row.skin_concern_display_name }}
                         </td>
-                        <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top">
-                          <span class="font-medium text-stone-700">{{ row.concern_name }}</span>
-                          <span class="ml-1 font-mono text-[11px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 border border-stone-200 inline-block mt-0.5 sm:mt-0">
-                            {{ row.concern_id }}
-                          </span>
+                        <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top font-medium text-stone-700">
+                          {{ row.concern_name }}
                         </td>
                         <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top whitespace-nowrap">
                           {% if row.skin_concern_exists %}
@@ -265,6 +345,7 @@
                 <table class="w-full text-left border-collapse">
                   <thead>
                     <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                      <th class="py-3 px-3 sm:px-4 w-28">Concern ID</th>
                       <th class="py-3 px-3 sm:px-4">Client Display Name</th>
                       <th class="py-3 px-3 sm:px-4">Clinical Name</th>
                       <th class="py-3 px-3 sm:px-4">Verdict</th>
@@ -275,10 +356,14 @@
                   <tbody class="divide-y divide-stone-100 text-sm">
                     {% for row in questionnaire_detections %}
                       <tr class="hover:bg-stone-50/80">
+                        <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top whitespace-nowrap">
+                          <span class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200">
+                            {{ row.concern_id }}
+                          </span>
+                        </td>
                         <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top font-semibold text-stone-900">{{ row.skin_concern_display_name }}</td>
-                        <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top">
-                          <span class="font-medium text-stone-700">{{ row.concern_name }}</span>
-                          <span class="ml-1.5 font-mono text-[11px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 border border-stone-200">{{ row.concern_id }}</span>
+                        <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top font-medium text-stone-700">
+                          {{ row.concern_name }}
                         </td>
                         <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top whitespace-nowrap">
                           {% if row.skin_concern_exists %}
@@ -312,6 +397,7 @@
                 <table class="w-full text-left border-collapse">
                   <thead>
                     <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                      <th class="py-3 px-3 sm:px-4 w-28">Concern ID</th>
                       <th class="py-3 px-3 sm:px-4">Concern</th>
                       <th class="py-3 px-3 sm:px-4">Visual AI</th>
                       <th class="py-3 px-3 sm:px-4">Questionnaire</th>
@@ -322,9 +408,13 @@
                   <tbody class="divide-y divide-stone-100 text-sm">
                     {% for row in combined_concerns %}
                       <tr class="hover:bg-stone-50/80">
+                        <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top whitespace-nowrap">
+                          <span class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200">
+                            {{ row.concern_id }}
+                          </span>
+                        </td>
                         <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top font-semibold text-stone-900">
                           {{ row.skin_concern_display_name }}
-                          <span class="ml-1 font-mono text-[11px] text-stone-400">({{ row.concern_id }})</span>
                         </td>
                         <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top whitespace-nowrap">{{ '✅ Yes' if row.image_skin_concern_exists else '—' }}</td>
                         <td class="py-3 sm:py-3.5 px-3 sm:px-4 align-top whitespace-nowrap">{{ '✅ Yes' if row.questionnaire_skin_concern_exists else '—' }}</td>
@@ -407,8 +497,8 @@
     <aside class="order-2 lg:order-1 lg:col-span-3 bg-white border border-stone-200 rounded-2xl shadow-sm flex flex-col overflow-hidden max-h-[420px] lg:max-h-[86vh]">
       <div class="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/60">
         <div>
-          <h2 class="text-sm font-semibold text-stone-900">Recent Face Scans</h2>
-          <p class="text-xs text-stone-500">Click any scan to load table • Tap ⤢ for photo</p>
+          <h2 class="text-sm font-semibold text-stone-900">Recent Scans</h2>
+          <p class="text-xs text-stone-500">Click any scan to see results • Tap ⤢ for photo</p>
         </div>
         <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-stone-200 text-stone-700">
           {{ recent_sessions | length }}
@@ -453,27 +543,19 @@
 
                   <div class="text-xs text-stone-500 truncate">
                     {% if item.created_at %}
-                      {{ item.created_at.strftime('%b %d, %Y • %I:%M %p') }}
+                      <span class="local-timestamp" data-utc="{{ item.created_at.isoformat() }}" data-format="short">
+                        {{ item.created_at.strftime('%b %d, %Y • %I:%M %p') }}
+                      </span>
                     {% else %}
                       Just now
                     {% endif %}
                   </div>
 
-                  <div class="flex items-center justify-between mt-1">
-                    <span class="text-[11px] text-stone-400 truncate max-w-[115px]">
+                  <div class="flex items-center justify-between mt-1 gap-1">
+                    <span class="text-[11px] text-stone-400 truncate max-w-[110px]">
                       👤 {{ item.customer_label }}
                     </span>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded font-medium
-                      {% if item.session_status in ['RECOMMENDATION_GENERATED', 'CONCERNS_COMBINED'] %}
-                        bg-emerald-50 text-emerald-700
-                      {% elif item.session_status in ['VALIDATION_FAILED', 'ANALYSIS_FAILED', 'ERROR'] %}
-                        bg-red-50 text-red-700
-                      {% else %}
-                        bg-amber-50 text-amber-700
-                      {% endif %}
-                    ">
-                      {{ item.session_status }}
-                    </span>
+                    {{ render_status_pill(item.session_status) }}
                   </div>
                 </div>
               </a>
@@ -481,7 +563,7 @@
               <button
                 type="button"
                 onclick="handleScanExpandClick(event, '{{ item._internal_id }}', {{ 'true' if is_active else 'false' }})"
-                class="p-2 rounded-lg text-stone-400 hover:text-stone-900 hover:bg-stone-200/70 transition shrink-0"
+                class="p-2 rounded-lg text-stone-400 hover:text-stone-900 hover:bg-stone-200/70 transition shrink-0 cursor-pointer bg-transparent"
                 title="Tap to expand scan photo & details"
                 aria-label="Expand scan details"
               >
@@ -511,12 +593,12 @@
       <div class="p-4 border-b border-stone-200 flex items-center justify-between bg-stone-50">
         <div>
           <h2 class="text-sm font-semibold text-stone-900">Switch Face Scan</h2>
-          <p class="text-xs text-stone-500">Tap any scan to load results</p>
+          <p class="text-xs text-stone-500">Tap any scan to see results</p>
         </div>
         <button
           type="button"
           onclick="toggleMobileScansDrawer(false)"
-          class="w-8 h-8 rounded-lg flex items-center justify-center text-stone-500 hover:bg-stone-200/60"
+          class="w-8 h-8 rounded-lg flex items-center justify-center text-stone-500 hover:bg-stone-200/60 cursor-pointer bg-transparent"
         >
           ✕
         </button>
@@ -539,15 +621,22 @@
                   <span class="text-xs font-bold text-stone-900">{{ item.scan_label }}</span>
                   <span class="text-[11px] font-semibold text-emerald-700">{{ item.flagged_concerns_count }} flagged</span>
                 </div>
-                <div class="text-xs text-stone-500 truncate">
-                  {% if item.created_at %}{{ item.created_at.strftime('%b %d • %I:%M %p') }}{% endif %}
+                <div class="text-xs text-stone-500 truncate mt-0.5">
+                  {% if item.created_at %}
+                    <span class="local-timestamp" data-utc="{{ item.created_at.isoformat() }}" data-format="short">
+                      {{ item.created_at.strftime('%b %d • %I:%M %p') }}
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="mt-1">
+                  {{ render_status_pill(item.session_status) }}
                 </div>
               </div>
             </a>
             <button
               type="button"
               onclick="toggleMobileScansDrawer(false); handleScanExpandClick(event, '{{ item._internal_id }}', {{ 'true' if is_active else 'false' }})"
-              class="p-2 rounded-lg text-stone-500 hover:bg-stone-200/70 shrink-0"
+              class="p-2 rounded-lg text-stone-500 hover:bg-stone-200/70 shrink-0 cursor-pointer bg-transparent"
               aria-label="Expand scan details"
             >
               ⤢
@@ -570,14 +659,12 @@
       <div class="px-5 sm:px-6 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50 shrink-0">
         <div class="flex items-center gap-2.5">
           <span class="text-base font-bold text-stone-900">{{ active_scan_label }}</span>
-          <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white text-stone-700 border border-stone-200">
-            Stage: {{ selected_session.session_status }}
-          </span>
+          {{ render_status_pill(selected_session.session_status) }}
         </div>
         <button
           type="button"
           onclick="closeScanModal()"
-          class="w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-stone-900 hover:bg-stone-200/60 transition"
+          class="w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-stone-900 hover:bg-stone-200/60 transition cursor-pointer bg-transparent"
           aria-label="Close modal"
         >
           ✕
@@ -625,7 +712,9 @@
             <div class="text-[11px] text-stone-500">Uploaded Timestamp</div>
             <div class="text-sm font-semibold text-stone-900 mt-0.5">
               {% if selected_session.created_at %}
-                {{ selected_session.created_at.strftime('%B %d, %Y at %I:%M %p UTC') }}
+                <span class="local-timestamp" data-utc="{{ selected_session.created_at.isoformat() }}" data-format="full">
+                  {{ selected_session.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                </span>
               {% else %}
                 Just now
               {% endif %}
@@ -650,7 +739,30 @@
   </div>
   {% endif %}
 
+</div>
+
   <script>
+    function formatAllTimestampsToUserLocalTime() {
+      const elements = document.querySelectorAll('.local-timestamp');
+      elements.forEach((el) => {
+        const rawUtc = el.getAttribute('data-utc');
+        if (!rawUtc) return;
+
+        // Ensure ISO string is treated as UTC even if naive
+        const normalizedIso = rawUtc.endsWith('Z') || rawUtc.includes('+') ? rawUtc : `${rawUtc}Z`;
+        const dateObj = new Date(normalizedIso);
+        if (isNaN(dateObj.getTime())) return;
+
+        el.textContent = new Intl.DateTimeFormat(undefined, {
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }).format(dateObj);
+      });
+    }
+
     function toggleMobileScansDrawer(show) {
       const drawer = document.getElementById('mobile-scans-drawer');
       if (!drawer) return;
@@ -685,6 +797,21 @@
         openScanModal();
       } else {
         window.location.href = `/admin?ref=${internalId}&expand=1`;
+      }
+    }
+
+    function toggleExportMenu(event) {
+      event.stopPropagation();
+      const menu = document.getElementById('export-dropdown-menu');
+      if (menu) {
+        menu.classList.toggle('hidden');
+      }
+    }
+
+    function closeExportMenu() {
+      const menu = document.getElementById('export-dropdown-menu');
+      if (menu) {
+        menu.classList.add('hidden');
       }
     }
 
@@ -730,42 +857,72 @@
       document.querySelectorAll('.tab-panel').forEach((el) => el.classList.add('hidden'));
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.classList.remove('bg-white', 'text-stone-900', 'font-semibold', 'shadow-sm');
-        btn.classList.add('text-stone-600', 'font-medium');
+        btn.classList.add('text-stone-600', 'font-medium', 'bg-transparent');
       });
 
       const panel = document.getElementById(`tab-panel-${tabName}`);
       const activeBtn = document.getElementById(`tab-btn-${tabName}`);
       if (panel) panel.classList.remove('hidden');
       if (activeBtn) {
-        activeBtn.classList.remove('text-stone-600', 'font-medium');
+        activeBtn.classList.remove('text-stone-600', 'font-medium', 'bg-transparent');
         activeBtn.classList.add('bg-white', 'text-stone-900', 'font-semibold', 'shadow-sm');
       }
     }
 
-    function exportVisibleRowsToCsv() {
+    function getVisibleExportData() {
       const rows = Array.from(document.querySelectorAll('.detection-row'))
         .filter((r) => !r.classList.contains('hidden'));
 
+      return rows.map((r) => ({
+        concern_id: r.getAttribute('data-concern-id') || '',
+        skin_concern_display_name: r.getAttribute('data-display-name') || '',
+        concern_name: r.getAttribute('data-concern-name') || '',
+        skin_concern_exists: r.getAttribute('data-exists') === 'true',
+        confidence_score: parseFloat(r.getAttribute('data-confidence') || '0'),
+        if_skin_concern_true_why: r.getAttribute('data-why') || '',
+      }));
+    }
+
+    function exportVisibleRows(format) {
+      closeExportMenu();
+      const data = getVisibleExportData();
+
+      if (format === 'xlsx' && typeof XLSX !== 'undefined') {
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        worksheet['!cols'] = [
+          { wch: 12 },
+          { wch: 28 },
+          { wch: 28 },
+          { wch: 18 },
+          { wch: 16 },
+          { wch: 65 },
+        ];
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'AI Skin Detections');
+        XLSX.writeFile(workbook, 'celrevive_ai_scan_results.xlsx');
+        return;
+      }
+
       const headers = [
+        'concern_id',
         'skin_concern_display_name',
         'concern_name',
-        'concern_id',
         'skin_concern_exists',
         'confidence_score',
         'if_skin_concern_true_why'
       ];
 
-      const escapeCsv = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+      const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
 
       const csvLines = [headers.join(',')];
-      rows.forEach((r) => {
+      data.forEach((item) => {
         csvLines.push([
-          escapeCsv(r.getAttribute('data-display-name')),
-          escapeCsv(r.getAttribute('data-concern-name')),
-          escapeCsv(r.getAttribute('data-concern-id')),
-          escapeCsv(r.getAttribute('data-exists')),
-          escapeCsv(r.getAttribute('data-confidence')),
-          escapeCsv(r.getAttribute('data-why')),
+          escapeCsv(item.concern_id),
+          escapeCsv(item.skin_concern_display_name),
+          escapeCsv(item.concern_name),
+          escapeCsv(item.skin_concern_exists),
+          escapeCsv(item.confidence_score),
+          escapeCsv(item.if_skin_concern_true_why),
         ].join(','));
       });
 
@@ -773,12 +930,13 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `celrevive_ai_scan_results.csv`;
+      a.download = 'celrevive_ai_scan_results.csv';
       a.click();
       URL.revokeObjectURL(url);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      formatAllTimestampsToUserLocalTime();
       applyClientFilters();
       const params = new URLSearchParams(window.location.search);
       if (params.get('expand') === '1') {
@@ -786,10 +944,15 @@
       }
     });
 
+    document.addEventListener('click', () => {
+      closeExportMenu();
+    });
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeScanModal();
         toggleMobileScansDrawer(false);
+        closeExportMenu();
       }
     });
   </script>
