@@ -143,7 +143,7 @@
                 id="tab-btn-image"
                 class="tab-btn px-3 py-1.5 rounded-md bg-white text-stone-900 font-semibold shadow-sm transition"
               >
-                📸 Photo AI ({{ image_detections | length }})
+                📸 Visual AI ({{ image_detections | length }})
               </button>
               <button
                 type="button"
@@ -172,7 +172,7 @@
             </div>
           </div>
 
-          <!-- TAB 1: PHOTO AI DETECTIONS -->
+          <!-- TAB 1: Visual AI DETECTIONS -->
           <div id="tab-panel-image" class="tab-panel">
             {% if image_detections %}
               <div class="overflow-x-auto custom-scroll">
@@ -234,7 +234,7 @@
                             {{ row.if_skin_concern_true_why }}
                           {% else %}
                             <span class="text-stone-400 italic text-xs">
-                              Concern was not visibly detected on the face.
+                              Concern was not visibly detected.
                             </span>
                           {% endif %}
                         </td>
@@ -249,7 +249,7 @@
             {% else %}
               <div class="p-10 sm:p-12 text-center">
                 <p class="text-base font-medium text-stone-700 mb-1">
-                  Photo AI Analysis in Progress or Not Submitted Yet
+                  Visual AI Analysis in Progress or Not Submitted Yet
                 </p>
                 <p class="text-xs text-stone-500 max-w-md mx-auto">
                   If you just uploaded a selfie on the store, wait 5–10 seconds for Gemini Vision AI to finish and click <strong>Refresh</strong> above.
@@ -313,7 +313,7 @@
                   <thead>
                     <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       <th class="py-3 px-3 sm:px-4">Concern</th>
-                      <th class="py-3 px-3 sm:px-4">Photo AI</th>
+                      <th class="py-3 px-3 sm:px-4">Visual AI</th>
                       <th class="py-3 px-3 sm:px-4">Questionnaire</th>
                       <th class="py-3 px-3 sm:px-4">Final Combined (`OR`)</th>
                       <th class="py-3 px-3 sm:px-4 min-w-[260px] sm:min-w-[320px]">Combined Explanation</th>
