@@ -101,7 +101,7 @@
               </p>
             </div>
 
-            <!-- Action Controls: Expand Photo Modal, Detected Filter, CSV Export & Hidden Tuning -->
+            <!-- Action Controls: Expand Photo Modal, Detected Filter & CSV Export -->
             <div class="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -131,53 +131,6 @@
               >
                 ⬇ CSV
               </button>
-
-              <!-- Tucked-Away Advanced Confidence Tuning Popover -->
-              <div class="relative">
-                <button
-                  type="button"
-                  onclick="toggleAdvancedTuning()"
-                  id="tuning-btn"
-                  class="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 text-stone-600 text-xs transition"
-                  title="Advanced AI Confidence Threshold Tuning"
-                >
-                  ⚙️
-                </button>
-                <div
-                  id="advanced-tuning-popover"
-                  class="hidden absolute right-0 mt-2 w-72 p-4 rounded-xl bg-white border border-stone-200 shadow-xl z-30"
-                >
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs font-semibold text-stone-800">Advanced Threshold Tuning</span>
-                    <button
-                      type="button"
-                      onclick="resetToDefaultFilter()"
-                      class="text-[11px] underline text-stone-500 hover:text-stone-900"
-                    >
-                      Default (&ge; 50%)
-                    </button>
-                  </div>
-                  <p class="text-[11px] text-stone-500 mb-3">
-                    Lower this threshold to inspect low-confidence AI evaluations below 50%.
-                  </p>
-                  <div class="flex items-center justify-between text-xs font-mono mb-1.5">
-                    <span class="text-stone-600">Cutoff:</span>
-                    <span id="confidence-badge" class="px-2 py-0.5 rounded bg-stone-900 text-white font-semibold">
-                      {{ (default_min_confidence * 100)|int }}% ({{ "%.2f"|format(default_min_confidence) }})
-                    </span>
-                  </div>
-                  <input
-                    id="confidence-slider"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value="{{ default_min_confidence }}"
-                    class="w-full accent-stone-900 cursor-pointer"
-                    oninput="applyClientFilters()"
-                  />
-                </div>
-              </div>
             </div>
           </div>
 
@@ -291,7 +244,7 @@
                 </table>
               </div>
               <div id="no-filter-matches" class="hidden p-10 text-center text-sm text-stone-500">
-                No skin concerns match the current filter. Click the <strong>⚙️</strong> icon in the top-right to lower the confidence cutoff and inspect all 28 concerns.
+                No skin concerns match the current search or filter criteria. Try changing your search or detected-only filter.
               </div>
             {% else %}
               <div class="p-10 sm:p-12 text-center">
@@ -735,34 +688,19 @@
       }
     }
 
-    function toggleAdvancedTuning() {
-      const popover = document.getElementById('advanced-tuning-popover');
-      if (popover) {
-        popover.classList.toggle('hidden');
-      }
-    }
-
     function applyClientFilters() {
-      const slider = document.getElementById('confidence-slider');
       const onlyDetectedToggle = document.getElementById('only-detected-toggle');
       const searchInput = document.getElementById('concern-search-input');
-      if (!slider) return;
 
-      const minScore = parseFloat(slider.value);
       const onlyDetected = onlyDetectedToggle ? onlyDetectedToggle.checked : false;
       const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
-
-      const badge = document.getElementById('confidence-badge');
-      if (badge) {
-        badge.textContent = `${Math.round(minScore * 100)}% (${minScore.toFixed(2)})`;
-      }
 
       const rows = document.querySelectorAll('.detection-row');
       let visibleCount = 0;
 
       rows.forEach((row) => {
-        const score = parseFloat(row.getAttribute('data-confidence') || '0');
         const exists = row.getAttribute('data-exists') === 'true';
+
         const textContent = (
           (row.getAttribute('data-display-name') || '') + ' ' +
           (row.getAttribute('data-concern-name') || '') + ' ' +
@@ -770,11 +708,10 @@
           (row.getAttribute('data-why') || '')
         ).toLowerCase();
 
-        const passesScore = score >= minScore;
         const passesExists = !onlyDetected || exists;
         const passesSearch = !searchTerm || textContent.includes(searchTerm);
 
-        if (passesScore && passesExists && passesSearch) {
+        if (passesExists && passesSearch) {
           row.classList.remove('hidden');
           visibleCount += 1;
         } else {
@@ -783,19 +720,10 @@
       });
 
       const emptyBanner = document.getElementById('no-filter-matches');
+
       if (emptyBanner && rows.length > 0) {
         emptyBanner.classList.toggle('hidden', visibleCount > 0);
       }
-    }
-
-    function resetToDefaultFilter() {
-      const slider = document.getElementById('confidence-slider');
-      const onlyDetectedToggle = document.getElementById('only-detected-toggle');
-      const searchInput = document.getElementById('concern-search-input');
-      if (slider) slider.value = 0.5;
-      if (onlyDetectedToggle) onlyDetectedToggle.checked = false;
-      if (searchInput) searchInput.value = '';
-      applyClientFilters();
     }
 
     function switchTab(tabName) {
