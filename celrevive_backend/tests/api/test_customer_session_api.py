@@ -23,6 +23,7 @@ def test_create_customer_session_persists_session():
             "/api/v1/create-session",
             json={
                 "shopify_customer_id": "SHOPIFY-CUST-10001",
+                "shopify_customer_name": "Jane Customer",
                 "shopify_customer_email": "customer@example.com",
                 "shopify_cart_id": "cart_10001",
                 "shopify_checkout_id": "checkout_10001",
@@ -38,6 +39,7 @@ def test_create_customer_session_persists_session():
     session = added_sessions[0]
     assert isinstance(session, CustomerSession)
     assert session.shopify_customer_id == "SHOPIFY-CUST-10001"
+    assert session.shopify_customer_name == "Jane Customer"
     assert session.shopify_customer_email == "customer@example.com"
     assert session.shopify_cart_id == "cart_10001"
     assert session.shopify_checkout_id == "checkout_10001"

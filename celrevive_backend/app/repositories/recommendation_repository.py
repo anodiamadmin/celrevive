@@ -20,6 +20,7 @@ from app.models.skin_image import SkinImage
 from app.schemas.formulation import FormulationRecommendation
 from app.schemas.customer_session import CombinedSkinConcernResponse
 from app.schemas.questionnaire import QuestionnaireAnalysis
+from app.services.questionnaire_ai.client import SKIN_TYPE_BY_ANSWER
 
 MAX_RECOMMENDATION_CONCERNS = 5
 
@@ -584,6 +585,12 @@ async def persist_recommendation(
     run = run_result.scalar_one_or_none()
     if run is None:
         raise ValueError("Recommendation run is not available for completion")
+    session_result = await db.execute(
+        select(CustomerSession.shopify_customer_name).where(
+            CustomerSession.session_id == session_id
+        )
+    )
+    user_full_name = session_result.scalar_one_or_none()
     run.recommendation_status = "GENERATED"
     run.overall_explanation = recommendation.overall_explanation
     run.completed_at = func.current_timestamp()
@@ -609,33 +616,13 @@ async def persist_recommendation(
         for rank, active in enumerate(recommendation.actives, start=1)
     )
 
-    bases_by_id = {
-        int(item["base_id"]): item["base_name"]
-        for item in candidate_information["candidate_bases"]
-    }
-    actives_by_id = {
-        int(item["active_id"]): item["active_name"]
-        for item in candidate_information["candidate_actives"]
-    }
-    output_json = {
-        "session_id": str(session_id),
-        "skin_concerns": candidate_information["combined_skin_concerns"],
-        "recommended_base": {
-            "base_id": recommendation.base_id,
-            "base_name": bases_by_id[recommendation.base_id],
-            "if_base_selected_why": recommendation.if_base_selected_why,
-        },
-        "recommended_actives": [
-            {
-                "active_id": active.active_id,
-                "active_name": actives_by_id[active.active_id],
-                "if_active_selected_why": active.if_active_selected_why,
-            }
-            for active in recommendation.actives
-        ],
-        "overall_explanation": recommendation.overall_explanation,
-        "safety_notice": recommendation.safety_notice,
-    }
+    output_json = build_recommendation_output(
+        recommendation_id=recommendation_id,
+        session_id=session_id,
+        user_full_name=user_full_name,
+        candidate_information=candidate_information,
+        recommendation=recommendation,
+    )
     db.add(
         RecommendationOutput(
             recommendation_id=recommendation_id,
@@ -654,6 +641,63 @@ async def persist_recommendation(
     return recommendation_id
 
 
+def build_recommendation_output(
+    *,
+    recommendation_id: uuid.UUID,
+    session_id: uuid.UUID,
+    user_full_name: str | None,
+    candidate_information: dict[str, Any],
+    recommendation: FormulationRecommendation,
+) -> dict[str, Any]:
+    bases_by_id = {
+        int(item["base_id"]): item
+        for item in candidate_information["candidate_bases"]
+    }
+    actives_by_id = {
+        int(item["active_id"]): item
+        for item in candidate_information["candidate_actives"]
+    }
+    selected_base = bases_by_id[recommendation.base_id]
+    base_name = selected_base["base_name"]
+    questionnaire = candidate_information["questionnaire_user_answer"]["questionnaire"]
+    q1_answer = next(
+        question["user_response"]
+        for section in questionnaire["sections"]
+        for question in section["questions"]
+        if question["question_id"] == "q1"
+    )
+    recommended_actives = []
+    for active in recommendation.actives:
+        catalog_active = actives_by_id[active.active_id]
+        recommended_actives.append(
+            {
+                "active_id": active.active_id,
+                "active_name": catalog_active["active_name"],
+                "if_active_selected_why": active.if_active_selected_why,
+                "recommended_usage_percentage": catalog_active["usage_level_min"],
+            }
+        )
+
+    return {
+        "session_id": str(session_id),
+        "recommendation_id": str(recommendation_id),
+        "user_full_name": user_full_name,
+        "skin_concerns": candidate_information["combined_skin_concerns"],
+        "skin_type": SKIN_TYPE_BY_ANSWER[q1_answer],
+        "recommended_base": {
+            "base_id": recommendation.base_id,
+            "base_name": base_name,
+            "if_base_selected_why": recommendation.if_base_selected_why,
+        },
+        "recommended_actives": recommended_actives,
+        "formulation_weight_g": (
+            50 if base_name.strip().casefold() in {"oil", "serum"} else 100
+        ),
+        "overall_explanation": recommendation.overall_explanation,
+        "safety_notice": recommendation.safety_notice,
+    }
+
+
 def validate_recommendation_selection(
     candidate_information: dict[str, Any],
     recommendation: FormulationRecommendation,
@@ -669,6 +713,10 @@ def validate_recommendation_selection(
     }
     active_candidates = {
         int(item["active_id"]) for item in candidate_information["candidate_actives"]
+    }
+    active_candidates_by_id = {
+        int(item["active_id"]): item
+        for item in candidate_information["candidate_actives"]
     }
     if recommendation.base_id not in base_candidates:
         raise ValueError("Formulation AI selected a base outside the candidate catalog")
@@ -692,6 +740,10 @@ def validate_recommendation_selection(
         if active_id not in active_candidates:
             raise ValueError(
                 f"Formulation AI selected an active outside the candidate catalog: {active_id}"
+            )
+        if active_candidates_by_id[active_id]["usage_level_min"] is None:
+            raise ValueError(
+                f"Recommended usage level is missing for active {active_id}"
             )
         if (recommendation.base_id, active_id) not in compatible_pairs:
             raise ValueError(

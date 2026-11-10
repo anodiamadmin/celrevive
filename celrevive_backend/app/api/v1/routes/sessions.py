@@ -51,6 +51,7 @@ async def create_customer_session(
     session = CustomerSession(
         session_id=uuid.uuid4(),
         shopify_customer_id=session_data.shopify_customer_id,
+        shopify_customer_name=session_data.shopify_customer_name,
         shopify_customer_email=session_data.shopify_customer_email,
         shopify_cart_id=session_data.shopify_cart_id,
         shopify_checkout_id=session_data.shopify_checkout_id,
@@ -237,6 +238,11 @@ async def submit_questionnaire(
 @router.get(
     "/sessions/{session_id}/recommendation",
     response_model=RecommendationOutputResponse,
+    summary="Get the final recommendation for the Shopify widget",
+    description=(
+        "Returns the persisted final recommendation for a session. Returns "
+        "409 while recommendation generation is still in progress."
+    ),
 )
 async def get_session_recommendation(
     session_id: uuid.UUID,

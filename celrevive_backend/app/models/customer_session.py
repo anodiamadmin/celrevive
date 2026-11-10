@@ -15,6 +15,7 @@ class CustomerSession(Base):
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     shopify_customer_id: Mapped[str | None] = mapped_column(String(100))
+    shopify_customer_name: Mapped[str | None] = mapped_column(String(255))
     shopify_customer_email: Mapped[str | None] = mapped_column(String(320))
     shopify_cart_id: Mapped[str | None] = mapped_column(String(255))
     shopify_checkout_id: Mapped[str | None] = mapped_column(String(255))

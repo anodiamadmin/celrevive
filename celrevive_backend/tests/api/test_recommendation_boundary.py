@@ -96,6 +96,8 @@ def test_recommendation_endpoint_returns_formatted_recommendation(monkeypatch):
     mock_db.execute = AsyncMock(return_value=result)
     output = {
         "session_id": str(session_id),
+        "recommendation_id": str(uuid.uuid4()),
+        "user_full_name": "Jane Customer",
         "skin_concerns": [
             {
                 "skin_concern_id": "SC0001",
@@ -106,6 +108,7 @@ def test_recommendation_endpoint_returns_formatted_recommendation(monkeypatch):
                 "if_skin_concern_true_why": "Questionnaire: Dryness was self-reported.",
             }
         ],
+        "skin_type": "dry",
         "recommended_base": {
             "base_id": 1,
             "base_name": "Light Lotion",
@@ -116,8 +119,10 @@ def test_recommendation_endpoint_returns_formatted_recommendation(monkeypatch):
                 "active_id": 7,
                 "active_name": "Active A",
                 "if_active_selected_why": "Addresses the detected concern.",
+                "recommended_usage_percentage": 1.0,
             }
         ],
+        "formulation_weight_g": 100,
         "overall_explanation": "The active addresses the detected concern.",
         "safety_notice": "",
     }

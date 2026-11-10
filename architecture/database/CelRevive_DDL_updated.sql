@@ -370,11 +370,12 @@ CREATE TABLE IF NOT EXISTS base_active_compatibility (
 
 -- A customer_session represents one execution of the CelRevive recommendation
 -- widget for a Shopify customer. Shopify remains the system of record for
--- authentication, cart, checkout and order state; this table stores only the
--- identifiers needed to correlate the recommendation workflow.
+-- authentication, cart, checkout and order state; this table stores the
+-- identifiers and optional display name needed for the recommendation workflow.
 CREATE TABLE IF NOT EXISTS customer_session (
     session_id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shopify_customer_id    VARCHAR(100),
+    shopify_customer_name  VARCHAR(255),
     shopify_customer_email VARCHAR(320),
     shopify_cart_id        VARCHAR(255),
     shopify_checkout_id    VARCHAR(255),
@@ -400,6 +401,9 @@ CREATE TABLE IF NOT EXISTS customer_session (
         )
     )
 );
+
+ALTER TABLE customer_session
+    ADD COLUMN IF NOT EXISTS shopify_customer_name VARCHAR(255);
 
 ALTER TABLE customer_session
     DROP CONSTRAINT IF EXISTS ck_customer_session_status;

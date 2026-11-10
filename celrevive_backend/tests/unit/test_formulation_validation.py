@@ -10,7 +10,14 @@ def candidate_information(*, detected: bool = True) -> dict:
             [{"skin_concern_id": "SC0001"}] if detected else []
         ),
         "candidate_bases": [{"base_id": 1, "base_name": "Cream"}],
-        "candidate_actives": [{"active_id": 7, "active_name": "Active A"}],
+        "candidate_actives": [
+            {
+                "active_id": 7,
+                "active_name": "Active A",
+                "usage_level_min": 1.0,
+                "usage_level_max": 4.0,
+            }
+        ],
         "compatible_base_active_pairs": [{"base_id": 1, "active_id": 7}],
         "active_concern_scores": [
             {
@@ -68,6 +75,14 @@ def test_formulation_rejects_actives_when_no_concerns_are_detected():
             candidate_information(detected=False),
             recommendation(),
         )
+
+
+def test_formulation_rejects_active_without_a_recommended_usage_level():
+    data = candidate_information()
+    data["candidate_actives"][0]["usage_level_min"] = None
+
+    with pytest.raises(ValueError, match="Recommended usage level is missing"):
+        validate_recommendation_selection(data, recommendation())
 
 
 def test_formulation_rejects_candidate_sets_larger_than_top_five():

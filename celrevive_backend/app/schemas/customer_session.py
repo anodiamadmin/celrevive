@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class CustomerSessionCreate(BaseModel):
     shopify_customer_id: str | None = Field(default=None, max_length=100)
+    shopify_customer_name: str | None = Field(default=None, max_length=255)
     shopify_customer_email: str | None = Field(default=None, max_length=320)
     shopify_cart_id: str | None = Field(default=None, max_length=255)
     shopify_checkout_id: str | None = Field(default=None, max_length=255)
