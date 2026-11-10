@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from app.core.config import get_settings
 from app.services.visual_ai.system_prompt import VISUAL_AI_SYSTEM_PROMPT
 from app.schemas.visual_ai import VisualAIResponse
+from app.services.genai_schema import genai_response_schema
 
 logger = logging.getLogger("celrevive_backend.visual_ai")
 
@@ -65,7 +66,7 @@ def call_visual_ai(image_bytes: bytes, mime_type: str) -> VisualAIAnalysisResult
             config=types.GenerateContentConfig(
                 system_instruction=VISUAL_AI_SYSTEM_PROMPT,
                 response_mime_type="application/json",
-                response_schema=VisualAIResponse,
+                response_schema=genai_response_schema(VisualAIResponse),
                 temperature=0.1,
             ),
         )

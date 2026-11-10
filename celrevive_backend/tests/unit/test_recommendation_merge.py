@@ -8,6 +8,7 @@ import pytest
 from app.repositories.recommendation_repository import (
     get_combined_skin_concerns,
     merge_concern_detections,
+    select_recommendation_concerns,
     store_questionnaire_detections,
 )
 from app.schemas.questionnaire import QuestionnaireAnalysis
@@ -19,22 +20,36 @@ def detection(
     source: str,
     exists: bool,
     explanation: str = "",
+    confidence_score: float | None = 0.0,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         concern_id=concern_id,
         detection_source=source,
         skin_concern_exists=exists,
         if_skin_concern_true_why=explanation,
+        confidence_score=confidence_score,
     )
 
 
 def test_merge_uses_or_and_keeps_source_explanations():
     result = merge_concern_detections(
         [
-            detection("SC0001", "IMAGE", True, "Visible dry patches."),
-            detection("SC0001", "QUESTIONNAIRE", True, "Dryness was self-reported."),
-            detection("SC0002", "IMAGE", True, "Visible dehydration signs."),
-            detection("SC0003", "QUESTIONNAIRE", True, "Irritation was self-reported."),
+            detection("SC0001", "IMAGE", True, "Visible dry patches.", 0.75),
+            detection(
+                "SC0001",
+                "QUESTIONNAIRE",
+                True,
+                "Dryness was self-reported.",
+                0.9,
+            ),
+            detection("SC0002", "IMAGE", True, "Visible dehydration signs.", 0.8),
+            detection(
+                "SC0003",
+                "QUESTIONNAIRE",
+                True,
+                "Irritation was self-reported.",
+                0.7,
+            ),
             detection("SC0004", "IMAGE", False, "must be cleared"),
             detection("SC0004", "QUESTIONNAIRE", False),
         ],
@@ -51,12 +66,66 @@ def test_merge_uses_or_and_keeps_source_explanations():
     assert by_id["SC0001"]["if_skin_concern_true_why"] == (
         "Image: Visible dry patches. Questionnaire: Dryness was self-reported."
     )
+    assert by_id["SC0001"]["confidence_score"] == 0.9
+    assert by_id["SC0002"]["confidence_score"] == 0.8
+    assert by_id["SC0003"]["confidence_score"] == 0.7
     assert by_id["SC0002"]["image_skin_concern_exists"] is True
     assert by_id["SC0002"]["questionnaire_skin_concern_exists"] is False
     assert by_id["SC0003"]["image_skin_concern_exists"] is False
     assert by_id["SC0003"]["questionnaire_skin_concern_exists"] is True
     assert by_id["SC0004"]["skin_concern_exists"] is False
     assert by_id["SC0004"]["if_skin_concern_true_why"] == ""
+
+
+def test_recommendation_concern_selection_returns_confidence_ranked_top_five():
+    concerns = [
+        {
+            "skin_concern_id": f"SC{number:04d}",
+            "skin_concern_exists": True,
+            "confidence_score": score,
+        }
+        for number, score in enumerate(
+            [0.61, 0.96, 0.77, 0.88, 0.69, 0.99, 0.5],
+            start=1,
+        )
+    ]
+    concerns.append(
+        {
+            "skin_concern_id": "SC0010",
+            "skin_concern_exists": False,
+            "confidence_score": 1.0,
+        }
+    )
+
+    selected = select_recommendation_concerns(concerns)
+
+    assert [item["skin_concern_id"] for item in selected] == [
+        "SC0006",
+        "SC0002",
+        "SC0004",
+        "SC0003",
+        "SC0005",
+    ]
+    assert len(selected) == 5
+
+
+def test_recommendation_concern_selection_breaks_ties_by_concern_id():
+    selected = select_recommendation_concerns(
+        [
+            {
+                "skin_concern_id": "SC0002",
+                "skin_concern_exists": True,
+                "confidence_score": 0.8,
+            },
+            {
+                "skin_concern_id": "SC0001",
+                "skin_concern_exists": True,
+                "confidence_score": 0.8,
+            },
+        ]
+    )
+
+    assert [item["skin_concern_id"] for item in selected] == ["SC0001", "SC0002"]
 
 
 def test_merge_rejects_duplicate_source_for_a_concern():

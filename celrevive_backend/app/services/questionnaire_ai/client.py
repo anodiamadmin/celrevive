@@ -13,6 +13,7 @@ from app.schemas.questionnaire import (
     SensitivityLevel,
     SkinType,
 )
+from app.services.genai_schema import genai_response_schema
 from app.services.questionnaire_ai.system_prompt import QUESTIONNAIRE_AI_SYSTEM_PROMPT
 
 logger = logging.getLogger("celrevive_backend.questionnaire_ai")
@@ -258,6 +259,19 @@ def _directly_supported_concern_ids(response_json: dict[str, Any]) -> set[str]:
     }:
         concern_ids.update({"SC0004", "SC0007"})
 
+    environmental_exposures = {
+        "Air-conditioned indoor environment",
+        "Outdoor sun exposure",
+        "Urban/city pollution",
+        "Dry heating environments",
+        "Coastal/humid environment",
+    }
+    if (
+        questions["q15"]["user_response"] != "Moderate"
+        or questions["q16"]["user_response"] in environmental_exposures
+    ):
+        concern_ids.add("SC2002")
+
     return concern_ids
 
 
@@ -294,7 +308,7 @@ def call_questionnaire_ai(response_json: dict[str, Any]) -> tuple[dict[str, Any]
             config=types.GenerateContentConfig(
                 system_instruction=QUESTIONNAIRE_AI_SYSTEM_PROMPT,
                 response_mime_type="application/json",
-                response_schema=QuestionnaireAnalysis,
+                response_schema=genai_response_schema(QuestionnaireAnalysis),
                 temperature=0.1,
             ),
         )
@@ -331,23 +345,16 @@ def call_questionnaire_ai(response_json: dict[str, Any]) -> tuple[dict[str, Any]
         if analysis.sensitivity_level != _expected_sensitivity(response_json):
             raise ValueError("LLM sensitivity_level does not match the submitted q3 answer")
         directly_supported_ids = _directly_supported_concern_ids(response_json)
-        detected_ids = {
-            entry.skin_concern_id
-            for entry in analysis.questionnaire_skin_concerns
-            if entry.skin_concern_exists
-        }
-        unsupported_ids = detected_ids - directly_supported_ids - {"SC2002"}
-        missing_ids = directly_supported_ids - detected_ids
-        if unsupported_ids:
-            raise ValueError(
-                "LLM marked concerns without direct questionnaire support: "
-                + ", ".join(sorted(unsupported_ids))
-            )
-        if missing_ids:
-            raise ValueError(
-                "LLM omitted directly supported questionnaire concerns: "
-                + ", ".join(sorted(missing_ids))
-            )
+        for entry in analysis.questionnaire_skin_concerns:
+            if entry.skin_concern_exists and entry.skin_concern_id not in directly_supported_ids:
+                logger.warning(
+                    "Clearing questionnaire concern unsupported by submitted answers "
+                    "concern_id=%s",
+                    entry.skin_concern_id,
+                )
+                entry.skin_concern_exists = False
+                entry.confidence_score = 0
+                entry.if_skin_concern_true_why = ""
     except (TypeError, json.JSONDecodeError, ValidationError, ValueError, KeyError) as exc:
         logger.error("Questionnaire AI response failed validation: %s", exc)
         raise QuestionnaireMalformedResponseError(str(exc)) from exc

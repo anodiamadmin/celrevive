@@ -21,6 +21,8 @@ from app.schemas.formulation import FormulationRecommendation
 from app.schemas.customer_session import CombinedSkinConcernResponse
 from app.schemas.questionnaire import QuestionnaireAnalysis
 
+MAX_RECOMMENDATION_CONCERNS = 5
+
 
 async def store_questionnaire_detections(
     db: AsyncSession,
@@ -193,6 +195,7 @@ def merge_concern_detections(
                 "questionnaire_skin_concern_exists": False,
                 "sources_seen": set(),
                 "explanations": [],
+                "confidence_scores": [],
             },
         )
         if detection.detection_source in concern["sources_seen"]:
@@ -207,11 +210,14 @@ def merge_concern_detections(
             else "questionnaire_skin_concern_exists"
         )
         concern[source_key] = detection.skin_concern_exists
-        if detection.skin_concern_exists and detection.if_skin_concern_true_why.strip():
-            label = "Image" if detection.detection_source == "IMAGE" else "Questionnaire"
-            concern["explanations"].append(
-                f"{label}: {detection.if_skin_concern_true_why.strip()}"
-            )
+        if detection.skin_concern_exists:
+            if detection.confidence_score is not None:
+                concern["confidence_scores"].append(float(detection.confidence_score))
+            if detection.if_skin_concern_true_why.strip():
+                label = "Image" if detection.detection_source == "IMAGE" else "Questionnaire"
+                concern["explanations"].append(
+                    f"{label}: {detection.if_skin_concern_true_why.strip()}"
+                )
 
     concern_ids = set(by_concern)
     if set(concern_names) != concern_ids:
@@ -229,6 +235,7 @@ def merge_concern_detections(
             "questionnaire_skin_concern_exists": questionnaire_exists,
             "skin_concern_exists": exists,
             "if_skin_concern_true_why": " ".join(item["explanations"]) if exists else "",
+            "confidence_score": max(item["confidence_scores"], default=0.0),
         }
         if combined_item["skin_concern_exists"] != (
             combined_item["image_skin_concern_exists"]
@@ -237,6 +244,19 @@ def merge_concern_detections(
             raise ValueError("Combined concern validation failed")
         combined.append(combined_item)
     return combined
+
+
+def select_recommendation_concerns(
+    combined_concerns: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Rank OR-positive concerns by their strongest source confidence and cap at five."""
+    return sorted(
+        (item for item in combined_concerns if item["skin_concern_exists"]),
+        key=lambda item: (
+            -float(item.get("confidence_score") or 0.0),
+            item["skin_concern_id"],
+        ),
+    )[:MAX_RECOMMENDATION_CONCERNS]
 
 
 async def combine_skin_concerns(
@@ -359,7 +379,7 @@ async def get_formulation_candidate_information(
     questionnaire_response_id: uuid.UUID,
     combined_concerns: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    positive_concerns = [item for item in combined_concerns if item["skin_concern_exists"]]
+    positive_concerns = select_recommendation_concerns(combined_concerns)
     concern_ids = [item["skin_concern_id"] for item in positive_concerns]
     answer_result = await db.execute(
         select(QuestionnaireResponse.response_json).where(
@@ -638,6 +658,12 @@ def validate_recommendation_selection(
     candidate_information: dict[str, Any],
     recommendation: FormulationRecommendation,
 ) -> dict[int, dict[str, float]]:
+    if len(candidate_information["combined_skin_concerns"]) > MAX_RECOMMENDATION_CONCERNS:
+        raise ValueError(
+            "Formulation candidate set exceeds the maximum of "
+            f"{MAX_RECOMMENDATION_CONCERNS} skin concerns"
+        )
+
     base_candidates = {
         int(item["base_id"]) for item in candidate_information["candidate_bases"]
     }

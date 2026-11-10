@@ -125,17 +125,20 @@ def test_questionnaire_ai_returns_complete_typed_concern_set(mock_client, _setti
     ),
 )
 @patch("app.services.questionnaire_ai.client.genai.Client")
-def test_questionnaire_ai_rejects_missing_directly_supported_concern(
+def test_questionnaire_ai_accepts_model_omitting_a_supported_concern(
     mock_client, _settings
 ):
     payload = model_payload({"SC0001"})
     mock_client.return_value.models.generate_content.return_value.text = json.dumps(payload)
 
-    with pytest.raises(
-        QuestionnaireMalformedResponseError,
-        match="omitted directly supported.*SC0002",
-    ):
-        call_questionnaire_ai(completed_questionnaire())
+    _, analysis = call_questionnaire_ai(completed_questionnaire())
+
+    detected_ids = {
+        concern.skin_concern_id
+        for concern in analysis.questionnaire_skin_concerns
+        if concern.skin_concern_exists
+    }
+    assert detected_ids == {"SC0001"}
 
 
 @patch(
@@ -146,17 +149,60 @@ def test_questionnaire_ai_rejects_missing_directly_supported_concern(
     ),
 )
 @patch("app.services.questionnaire_ai.client.genai.Client")
-def test_questionnaire_ai_rejects_concern_without_direct_support(
+def test_questionnaire_ai_clears_concern_without_direct_support(
     mock_client, _settings
 ):
     payload = model_payload({"SC0001", "SC0002", "SC0006"})
     mock_client.return_value.models.generate_content.return_value.text = json.dumps(payload)
 
-    with pytest.raises(
-        QuestionnaireMalformedResponseError,
-        match="without direct questionnaire support.*SC0006",
-    ):
-        call_questionnaire_ai(completed_questionnaire())
+    _, analysis = call_questionnaire_ai(completed_questionnaire())
+
+    detected_ids = {
+        concern.skin_concern_id
+        for concern in analysis.questionnaire_skin_concerns
+        if concern.skin_concern_exists
+    }
+    assert detected_ids == {"SC0001", "SC0002"}
+    unsupported = next(
+        concern
+        for concern in analysis.questionnaire_skin_concerns
+        if concern.skin_concern_id == "SC0006"
+    )
+    assert unsupported.skin_concern_exists is False
+    assert unsupported.confidence_score == 0
+    assert unsupported.if_skin_concern_true_why == ""
+
+
+@patch(
+    "app.services.questionnaire_ai.client.get_settings",
+    return_value=SimpleNamespace(
+        GEMINI_API_KEY="test-key",
+        QUESTIONNAIRE_AI_MODEL="test-model",
+    ),
+)
+@patch("app.services.questionnaire_ai.client.genai.Client")
+def test_questionnaire_ai_clears_dryness_when_answers_do_not_support_it(
+    mock_client, _settings
+):
+    questionnaire = completed_questionnaire()
+    questions = {
+        question["question_id"]: question
+        for section in questionnaire["questionnaire"]["sections"]
+        for question in section["questions"]
+    }
+    questions["q1"]["user_response"] = "Normal"
+    questions["q2"]["user_response"] = ["None of the above"]
+    payload = model_payload({"SC0001", "SC0002"})
+    payload["skin_type"] = "normal"
+    mock_client.return_value.models.generate_content.return_value.text = json.dumps(payload)
+
+    _, analysis = call_questionnaire_ai(questionnaire)
+
+    assert all(
+        not concern.skin_concern_exists
+        for concern in analysis.questionnaire_skin_concerns
+        if concern.skin_concern_id in {"SC0001", "SC0002"}
+    )
 
 
 @patch(

@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.core.config import get_settings
 from app.schemas.formulation import FormulationRecommendation
+from app.services.genai_schema import genai_response_schema
 from app.services.formulation_ai.system_prompt import FORMULATION_AI_SYSTEM_PROMPT
 
 logger = logging.getLogger("celrevive_backend.formulation_ai")
@@ -48,7 +49,7 @@ def call_formulation_ai(
             config=types.GenerateContentConfig(
                 system_instruction=FORMULATION_AI_SYSTEM_PROMPT,
                 response_mime_type="application/json",
-                response_schema=FormulationRecommendation,
+                response_schema=genai_response_schema(FormulationRecommendation),
                 temperature=0.1,
             ),
         )

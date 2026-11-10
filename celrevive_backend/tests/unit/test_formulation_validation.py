@@ -68,3 +68,14 @@ def test_formulation_rejects_actives_when_no_concerns_are_detected():
             candidate_information(detected=False),
             recommendation(),
         )
+
+
+def test_formulation_rejects_candidate_sets_larger_than_top_five():
+    data = candidate_information()
+    data["combined_skin_concerns"] = [
+        {"skin_concern_id": f"SC{number:04d}"}
+        for number in range(1, 7)
+    ]
+
+    with pytest.raises(ValueError, match="maximum of 5 skin concerns"):
+        validate_recommendation_selection(data, recommendation())
