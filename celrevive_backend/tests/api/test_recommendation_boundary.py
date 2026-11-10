@@ -105,6 +105,7 @@ def test_recommendation_endpoint_returns_formatted_recommendation(monkeypatch):
                 "image_skin_concern_exists": False,
                 "questionnaire_skin_concern_exists": True,
                 "skin_concern_exists": True,
+                "confidence_score": 0.87,
                 "if_skin_concern_true_why": "Questionnaire: Dryness was self-reported.",
             }
         ],

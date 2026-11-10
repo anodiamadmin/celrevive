@@ -20,13 +20,17 @@ class RecommendedActiveResponse(BaseModel):
     )
 
 
+class RecommendedSkinConcernResponse(CombinedSkinConcernResponse):
+    confidence_score: float | None = Field(default=None, ge=0, le=1)
+
+
 class RecommendationOutputResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     session_id: uuid.UUID
     recommendation_id: uuid.UUID
     user_full_name: str | None = None
-    skin_concerns: list[CombinedSkinConcernResponse]
+    skin_concerns: list[RecommendedSkinConcernResponse]
     skin_type: SkinType
     recommended_base: RecommendedBaseResponse
     recommended_actives: list[RecommendedActiveResponse] = Field(default_factory=list)

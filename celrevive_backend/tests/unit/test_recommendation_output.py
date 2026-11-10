@@ -32,6 +32,7 @@ def test_recommendation_output_formats_widget_fields(base_name, expected_weight)
                 "image_skin_concern_exists": False,
                 "questionnaire_skin_concern_exists": True,
                 "skin_concern_exists": True,
+                "confidence_score": 0.87,
                 "if_skin_concern_true_why": "Dryness was self-reported.",
             }
         ],
@@ -70,6 +71,7 @@ def test_recommendation_output_formats_widget_fields(base_name, expected_weight)
     assert output["user_full_name"] == "Jane Customer"
     assert output["skin_type"] == "dry"
     assert output["skin_concerns"] == candidate_information["combined_skin_concerns"]
+    assert output["skin_concerns"][0]["confidence_score"] == 0.87
     assert output["recommended_actives"][0]["recommended_usage_percentage"] == 1.0
     assert output["formulation_weight_g"] == expected_weight
     assert output["overall_explanation"] == recommendation.overall_explanation
