@@ -1,7 +1,10 @@
+import json
+
 import pytest
 from pydantic import ValidationError
 
 from app.schemas.visual_ai import SUPPORTED_IMAGE_CONCERNS, VisualAIResponse
+from app.services.questionnaire_ai.client import DETECTION_TEMPLATE_PATH
 
 
 def make_template_payload() -> dict:
@@ -30,9 +33,30 @@ def test_complete_template_is_accepted():
     assert len(response.image_skin_concerns) == 28
 
 
-def test_duplicate_and_unsupported_ids_are_filtered_before_coverage_check():
+def test_image_and_questionnaire_detection_scopes_match_the_detectability_matrix():
+    questionnaire_template = json.loads(
+        DETECTION_TEMPLATE_PATH.read_text(encoding="utf-8")
+    )
+    questionnaire_ids = {
+        item["skin_concern_id"]
+        for item in questionnaire_template["questionnaire_skin_concerns"]
+    }
+
+    assert SUPPORTED_IMAGE_CONCERNS == (
+        {f"SC{number:04d}" for number in range(1, 20)}
+        | {f"SC{number:04d}" for number in range(1001, 1010)}
+    )
+    assert questionnaire_ids == (
+        {f"SC{number:04d}" for number in range(1, 20)}
+        | {f"SC{number:04d}" for number in range(2001, 2005)}
+    )
+    assert SUPPORTED_IMAGE_CONCERNS & questionnaire_ids == {
+        f"SC{number:04d}" for number in range(1, 20)
+    }
+
+
+def test_image_detection_rejects_questionnaire_only_ids():
     payload = make_template_payload()
-    payload["image_skin_concerns"].append(payload["image_skin_concerns"][0].copy())
     payload["image_skin_concerns"].append(
         {
             "skin_concern_id": "SC2001",
@@ -43,17 +67,23 @@ def test_duplicate_and_unsupported_ids_are_filtered_before_coverage_check():
         }
     )
 
-    response = VisualAIResponse.model_validate(payload)
+    with pytest.raises(ValidationError, match="not detectable from images"):
+        VisualAIResponse.model_validate(payload)
 
-    assert len(response.image_skin_concerns) == 28
-    assert len({item.skin_concern_id for item in response.image_skin_concerns}) == 28
+
+def test_image_detection_rejects_duplicate_ids():
+    payload = make_template_payload()
+    payload["image_skin_concerns"].append(payload["image_skin_concerns"][0].copy())
+
+    with pytest.raises(ValidationError, match="duplicate concern ID"):
+        VisualAIResponse.model_validate(payload)
 
 
 def test_incomplete_template_raises_validation_error():
     payload = make_template_payload()
     payload["image_skin_concerns"] = payload["image_skin_concerns"][:-1]
 
-    with pytest.raises(ValidationError, match="missing 1 required concern"):
+    with pytest.raises(ValidationError, match="missing 1 required image concern"):
         VisualAIResponse.model_validate(payload)
 
 

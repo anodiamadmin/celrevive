@@ -25,6 +25,15 @@ class PrimarySkinConcern(BaseModel):
     confidence_score: float
 
 
+class CombinedSkinConcernResponse(BaseModel):
+    skin_concern_id: str
+    skin_concern_name: str
+    image_skin_concern_exists: bool
+    questionnaire_skin_concern_exists: bool
+    skin_concern_exists: bool
+    if_skin_concern_true_why: str
+
+
 class ImageAnalysisStatusResponse(BaseModel):
     session_id: uuid.UUID
     analysis_status: Literal[
@@ -36,3 +45,4 @@ class ImageAnalysisStatusResponse(BaseModel):
     ]
     message: str
     primary_concerns: list[PrimarySkinConcern] = Field(default_factory=list)
+    combined_skin_concerns: list[CombinedSkinConcernResponse] | None = None

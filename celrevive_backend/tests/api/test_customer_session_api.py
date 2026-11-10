@@ -105,6 +105,7 @@ def test_analysis_status_is_pending_until_worker_finishes():
         "analysis_status": "pending",
         "message": "Image analysis is in progress.",
         "primary_concerns": [],
+        "combined_skin_concerns": None,
     }
 
 
@@ -133,6 +134,7 @@ def test_analysis_status_is_processing_while_worker_runs():
         "analysis_status": "processing",
         "message": "Image analysis is in progress.",
         "primary_concerns": [],
+        "combined_skin_concerns": None,
     }
 
 
@@ -156,6 +158,33 @@ def test_analysis_status_returns_results_when_complete(monkeypatch):
             ]
         ),
     )
+    monkeypatch.setattr(
+        "app.api.v1.routes.sessions.get_combined_skin_concerns",
+        AsyncMock(
+            return_value=[
+                {
+                    "skin_concern_id": "SC0001",
+                    "skin_concern_name": "Dry Skin",
+                    "image_skin_concern_exists": True,
+                    "questionnaire_skin_concern_exists": True,
+                    "skin_concern_exists": True,
+                    "if_skin_concern_true_why": (
+                        "Image: Visible dryness. Questionnaire: Dryness was self-reported."
+                    ),
+                },
+                {
+                    "skin_concern_id": "SC0002",
+                    "skin_concern_name": "Dehydrated Skin",
+                    "image_skin_concern_exists": False,
+                    "questionnaire_skin_concern_exists": True,
+                    "skin_concern_exists": True,
+                    "if_skin_concern_true_why": (
+                        "Questionnaire: Dehydration was self-reported."
+                    ),
+                },
+            ]
+        ),
+    )
 
     async def fake_get_db():
         yield mock_db
@@ -171,9 +200,31 @@ def test_analysis_status_returns_results_when_complete(monkeypatch):
     assert response.json()["primary_concerns"] == [
         {"concern_name": "Acne", "confidence_score": 0.87}
     ]
+    assert response.json()["combined_skin_concerns"] == [
+        {
+            "skin_concern_id": "SC0001",
+            "skin_concern_name": "Dry Skin",
+            "image_skin_concern_exists": True,
+            "questionnaire_skin_concern_exists": True,
+            "skin_concern_exists": True,
+            "if_skin_concern_true_why": (
+                "Image: Visible dryness. Questionnaire: Dryness was self-reported."
+            ),
+        },
+        {
+            "skin_concern_id": "SC0002",
+            "skin_concern_name": "Dehydrated Skin",
+            "image_skin_concern_exists": False,
+            "questionnaire_skin_concern_exists": True,
+            "skin_concern_exists": True,
+            "if_skin_concern_true_why": (
+                "Questionnaire: Dehydration was self-reported."
+            ),
+        },
+    ]
 
 
-def test_analysis_status_returns_failed_when_worker_fails():
+def test_analysis_status_returns_failed_when_worker_fails(monkeypatch):
     session_id = uuid.uuid4()
     mock_db = Mock()
     result = Mock()
@@ -182,6 +233,14 @@ def test_analysis_status_returns_failed_when_worker_fails():
         session_status="ERROR",
     )
     mock_db.execute = AsyncMock(return_value=result)
+    monkeypatch.setattr(
+        "app.api.v1.routes.sessions.get_detected_image_concerns_by_session",
+        AsyncMock(return_value=[]),
+    )
+    monkeypatch.setattr(
+        "app.api.v1.routes.sessions.get_combined_skin_concerns",
+        AsyncMock(return_value=None),
+    )
 
     async def fake_get_db():
         yield mock_db

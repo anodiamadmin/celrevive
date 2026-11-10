@@ -1,14 +1,7 @@
 import uuid
 from pydantic import BaseModel, ConfigDict, Field
 
-
-class CombinedSkinConcernResponse(BaseModel):
-    skin_concern_id: str
-    skin_concern_name: str
-    image_skin_concern_exists: bool
-    questionnaire_skin_concern_exists: bool
-    skin_concern_exists: bool
-    if_skin_concern_true_why: str
+from app.schemas.customer_session import CombinedSkinConcernResponse
 
 
 class RecommendedBaseResponse(BaseModel):

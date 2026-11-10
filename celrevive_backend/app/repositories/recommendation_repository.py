@@ -18,6 +18,7 @@ from app.models.session_skin_concern_detection import SessionSkinConcernDetectio
 from app.models.skin_concern import SkinConcern
 from app.models.skin_image import SkinImage
 from app.schemas.formulation import FormulationRecommendation
+from app.schemas.customer_session import CombinedSkinConcernResponse
 from app.schemas.questionnaire import QuestionnaireAnalysis
 
 
@@ -38,22 +39,40 @@ async def store_questionnaire_detections(
     if response_result.scalar_one_or_none() is None:
         raise ValueError("Questionnaire response does not belong to the supplied session")
 
-    concern_ids = [item.skin_concern_id for item in detections.questionnaire_skin_concerns]
     concerns_result = await db.execute(
-        select(SkinConcern).where(SkinConcern.concern_id.in_(concern_ids))
+        select(SkinConcern)
     )
     concern_by_id = {item.concern_id: item for item in concerns_result.scalars().all()}
-    if set(concern_by_id) != set(concern_ids):
+    detection_ids = [
+        item.skin_concern_id for item in detections.questionnaire_skin_concerns
+    ]
+    detected_id_set = set(detection_ids)
+    if len(detection_ids) != len(detected_id_set):
+        raise ValueError("Questionnaire AI returned duplicate skin_concern_id values")
+
+    unknown_ids = detected_id_set - set(concern_by_id)
+    if unknown_ids:
         raise ValueError("Questionnaire AI returned an unknown skin_concern_id")
+    allowed_ids = {
+        concern_id
+        for concern_id, concern in concern_by_id.items()
+        if concern.detectable_by_questionnaire
+    }
     unsupported = [
         item.skin_concern_id
         for item in detections.questionnaire_skin_concerns
-        if not concern_by_id[item.skin_concern_id].detectable_by_questionnaire
+        if item.skin_concern_id not in allowed_ids
     ]
     if unsupported:
         raise ValueError(
             "Questionnaire AI returned concerns not enabled for questionnaire detection: "
             + ", ".join(sorted(unsupported))
+        )
+    missing = allowed_ids - detected_id_set
+    if missing:
+        raise ValueError(
+            "Questionnaire AI omitted concerns enabled for questionnaire detection: "
+            + ", ".join(sorted(missing))
         )
 
     await db.execute(
@@ -297,6 +316,40 @@ async def combine_skin_concerns(
     )
     await db.commit()
     return combined
+
+
+async def get_combined_skin_concerns(
+    db: AsyncSession,
+    *,
+    session_id: uuid.UUID,
+) -> list[CombinedSkinConcernResponse] | None:
+    result = await db.execute(
+        select(
+            SessionSkinConcern,
+            func.coalesce(
+                SkinConcern.skin_concern_display_name,
+                SkinConcern.concern_name,
+            ),
+        )
+        .join(SkinConcern, SkinConcern.concern_id == SessionSkinConcern.concern_id)
+        .where(SessionSkinConcern.session_id == session_id)
+        .order_by(SessionSkinConcern.concern_id)
+    )
+    rows = result.all()
+    if not rows:
+        return None
+
+    return [
+        CombinedSkinConcernResponse(
+            skin_concern_id=concern.concern_id,
+            skin_concern_name=concern_name,
+            image_skin_concern_exists=concern.image_skin_concern_exists,
+            questionnaire_skin_concern_exists=concern.questionnaire_skin_concern_exists,
+            skin_concern_exists=concern.skin_concern_exists,
+            if_skin_concern_true_why=concern.if_skin_concern_true_why,
+        )
+        for concern, concern_name in rows
+    ]
 
 
 async def get_formulation_candidate_information(

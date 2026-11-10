@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.session_skin_concern_detection import SessionSkinConcernDetection
 from app.models.skin_image import SkinImage
+from app.models.skin_concern import SkinConcern
 from app.schemas.visual_ai import (
     MAX_DISPLAYED_CONCERNS,
     MIN_CONFIDENCE_SCORE,
@@ -32,6 +33,28 @@ async def store_visual_ai_detections(
     stored_session_id = image_result.scalar_one_or_none()
     if stored_session_id != session_id:
         raise ValueError("Image does not belong to the supplied customer session")
+
+    catalog_result = await db.execute(
+        select(SkinConcern.concern_id).where(SkinConcern.detectable_by_selfie.is_(True))
+    )
+    allowed_concern_ids = set(catalog_result.scalars().all())
+    detection_ids = [detection.skin_concern_id for detection in detections]
+    if len(detection_ids) != len(set(detection_ids)):
+        raise ValueError("Image AI returned duplicate skin_concern_id values")
+
+    unsupported_ids = set(detection_ids) - allowed_concern_ids
+    missing_ids = allowed_concern_ids - set(detection_ids)
+    if unsupported_ids or missing_ids:
+        details = []
+        if unsupported_ids:
+            details.append(
+                "not enabled for image detection: " + ", ".join(sorted(unsupported_ids))
+            )
+        if missing_ids:
+            details.append(
+                "missing image-detectable concerns: " + ", ".join(sorted(missing_ids))
+            )
+        raise ValueError("Image AI concern set does not match the catalog; " + "; ".join(details))
 
     # Clear any prior detection rows for this image (covers retries after a
     # failed/partial run). image_id FK is ON DELETE CASCADE from skin_image,

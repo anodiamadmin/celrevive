@@ -1,15 +1,12 @@
-"""
-Pydantic schemas for Visual AI integration.
-Handles AI response validation, deduplication, supported-ID filtering,
-and explanation-consistency checks.
-"""
+"""Pydantic schemas for image-based concern detection."""
 import logging
 from typing import List, Set
 from pydantic import BaseModel, field_validator, model_validator
 
 logger = logging.getLogger("celrevive_backend.visual_ai")
 
-# Valid IDs where detectable_by_selfie = true (SC0001-SC0019, SC1001-SC1009)
+# Detectability matrix: shared concerns SC0001-SC0019 plus image-only
+# concerns SC1001-SC1009. Questionnaire-only concerns SC2001-SC2004 are excluded.
 SUPPORTED_IMAGE_CONCERNS: Set[str] = {
     f"SC{str(i).zfill(4)}" for i in list(range(1, 20)) + list(range(1001, 1010))
 }
@@ -60,19 +57,22 @@ class VisualAIResponse(BaseModel):
 
     @field_validator("image_skin_concerns")
     @classmethod
-    def drop_unsupported_and_dedupe(cls, concerns: List[ImageSkinConcern]) -> List[ImageSkinConcern]:
-        seen_ids = set()
-        validated = []
+    def reject_out_of_scope_or_duplicate_ids(
+        cls, concerns: List[ImageSkinConcern]
+    ) -> List[ImageSkinConcern]:
+        seen_ids: set[str] = set()
         for concern in concerns:
             if concern.skin_concern_id not in SUPPORTED_IMAGE_CONCERNS:
-                logger.warning("Unsupported or non-visual concern ID dropped: %s", concern.skin_concern_id)
-                continue
+                raise ValueError(
+                    "Image AI returned a concern not detectable from images: "
+                    f"{concern.skin_concern_id}"
+                )
             if concern.skin_concern_id in seen_ids:
-                logger.warning("Duplicate concern ID dropped (kept first occurrence): %s", concern.skin_concern_id)
-                continue
+                raise ValueError(
+                    f"Image AI returned duplicate concern ID: {concern.skin_concern_id}"
+                )
             seen_ids.add(concern.skin_concern_id)
-            validated.append(concern)
-        return validated
+        return concerns
 
     @model_validator(mode="after")
     def check_full_template_coverage(self):
@@ -80,7 +80,7 @@ class VisualAIResponse(BaseModel):
         missing = SUPPORTED_IMAGE_CONCERNS - present_ids
         if missing:
             raise ValueError(
-                f"AI response missing {len(missing)} required concern IDs after filtering: {sorted(missing)}"
+                f"AI response missing {len(missing)} required image concern IDs: {sorted(missing)}"
             )
         return self
 

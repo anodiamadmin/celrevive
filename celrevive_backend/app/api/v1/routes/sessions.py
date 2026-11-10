@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.customer_session import CustomerSession
 from app.models.questionnaire_response import QuestionnaireResponse
-from app.repositories.recommendation_repository import get_latest_recommendation_output
+from app.repositories.recommendation_repository import (
+    get_combined_skin_concerns,
+    get_latest_recommendation_output,
+)
 from app.repositories.skin_concern_detection_repository import (
     get_detected_image_concerns_by_session,
 )
@@ -67,6 +70,14 @@ async def create_customer_session(
 @router.get(
     "/sessions/{session_id}/analysis",
     response_model=ImageAnalysisStatusResponse,
+    summary="Get image and combined concern status",
+    description=(
+        "Poll this endpoint to check image analysis. Image analysis starts "
+        "automatically after an accepted image upload; questionnaire analysis "
+        "starts after questionnaire submission. `combined_skin_concerns` remains "
+        "null until both detection results have been combined. This endpoint "
+        "reports status and does not start analysis."
+    ),
 )
 async def get_image_analysis_status(
     session_id: uuid.UUID,
@@ -95,10 +106,20 @@ async def get_image_analysis_status(
             message="Image analysis failed. Please upload the image again.",
         )
     if session.session_status == "ERROR":
+        image_concerns = await get_detected_image_concerns_by_session(
+            db,
+            session_id=session_id,
+        )
+        combined_concerns = await get_combined_skin_concerns(
+            db,
+            session_id=session_id,
+        )
         return ImageAnalysisStatusResponse(
             session_id=session_id,
             analysis_status="analysis_failed",
             message="Questionnaire or recommendation analysis failed.",
+            primary_concerns=image_concerns,
+            combined_skin_concerns=combined_concerns,
         )
     if session.session_status in {
         "RECOMMENDATION_GENERATED",
@@ -108,11 +129,16 @@ async def get_image_analysis_status(
             db,
             session_id=session_id,
         )
+        combined_concerns = await get_combined_skin_concerns(
+            db,
+            session_id=session_id,
+        )
         return ImageAnalysisStatusResponse(
             session_id=session_id,
             analysis_status="completed",
             message="Image analysis completed.",
             primary_concerns=concerns,
+            combined_skin_concerns=combined_concerns,
         )
     if session.session_status == "IMAGE_RECEIVED":
         return ImageAnalysisStatusResponse(

@@ -57,6 +57,10 @@ def test_completed_analysis_returns_structured_primary_concerns(monkeypatch):
             ]
         ),
     )
+    monkeypatch.setattr(
+        "app.api.v1.routes.sessions.get_combined_skin_concerns",
+        AsyncMock(return_value=None),
+    )
 
     async def fake_get_db():
         yield mock_db
@@ -77,6 +81,7 @@ def test_completed_analysis_returns_structured_primary_concerns(monkeypatch):
         "primary_concerns": [
             {"concern_name": "Acne", "confidence_score": 0.87}
         ],
+        "combined_skin_concerns": None,
     }
 
 

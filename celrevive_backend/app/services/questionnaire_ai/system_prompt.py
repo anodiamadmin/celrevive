@@ -6,6 +6,9 @@ template. This is cosmetic personalization, not medical diagnosis or treatment.
 OUTPUT
 - Return exactly the supplied JSON response schema.
 - Return every concern in the template exactly once, preserving its ID and name.
+- The questionnaire template contains only questionnaire-detectable concerns.
+  Never return image-only concerns SC1001-SC1009 or any ID outside that
+  template.
 - Set a concern to true only when the submitted answers give direct support for
   that concern. Otherwise set it to false, use confidence 0, and an empty reason.
 - For a true concern, provide a concise explanation grounded in the exact

@@ -1,8 +1,17 @@
+import json
+import uuid
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from app.repositories.recommendation_repository import merge_concern_detections
+from app.repositories.recommendation_repository import (
+    get_combined_skin_concerns,
+    merge_concern_detections,
+    store_questionnaire_detections,
+)
+from app.schemas.questionnaire import QuestionnaireAnalysis
+from app.services.questionnaire_ai.client import DETECTION_TEMPLATE_PATH
 
 
 def detection(
@@ -67,3 +76,125 @@ def test_merge_rejects_a_missing_master_concern_name():
             [detection("SC0001", "IMAGE", False)],
             {},
         )
+
+
+def questionnaire_analysis() -> QuestionnaireAnalysis:
+    template = json.loads(DETECTION_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    return QuestionnaireAnalysis(
+        skin_type="unknown",
+        sensitivity_level="unknown",
+        questionnaire_skin_concerns=[
+            {
+                **item,
+                "confidence_score": 0.0,
+            }
+            for item in template["questionnaire_skin_concerns"]
+        ],
+    )
+
+
+def questionnaire_storage_db(session_id: uuid.UUID):
+    response_result = Mock()
+    response_result.scalar_one_or_none.return_value = object()
+    catalog_result = Mock()
+    catalog_result.scalars.return_value.all.return_value = [
+        SimpleNamespace(
+            concern_id=f"SC{number:04d}",
+            detectable_by_questionnaire=number < 1000 or number >= 2001,
+        )
+        for number in (
+            list(range(1, 20))
+            + list(range(1001, 1010))
+            + list(range(2001, 2005))
+        )
+    ]
+    db = Mock()
+    db.execute = AsyncMock(side_effect=[response_result, catalog_result, Mock()])
+    db.add_all = Mock()
+    db.commit = AsyncMock()
+    return db
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_storage_persists_only_questionnaire_detectable_ids():
+    session_id = uuid.uuid4()
+    response_id = uuid.uuid4()
+    db = questionnaire_storage_db(session_id)
+
+    await store_questionnaire_detections(
+        db,
+        session_id=session_id,
+        questionnaire_response_id=response_id,
+        detections=questionnaire_analysis(),
+        raw_response_json={},
+    )
+
+    rows = list(db.add_all.call_args.args[0])
+    assert len(rows) == 23
+    assert {row.concern_id for row in rows} == {
+        f"SC{number:04d}" for number in list(range(1, 20)) + list(range(2001, 2005))
+    }
+    assert all(row.detection_source == "QUESTIONNAIRE" for row in rows)
+    db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_storage_rejects_image_only_ids():
+    session_id = uuid.uuid4()
+    response_id = uuid.uuid4()
+    db = questionnaire_storage_db(session_id)
+    analysis = questionnaire_analysis()
+    analysis.questionnaire_skin_concerns[-1].skin_concern_id = "SC1001"
+
+    with pytest.raises(ValueError, match="not enabled for questionnaire detection"):
+        await store_questionnaire_detections(
+            db,
+            session_id=session_id,
+            questionnaire_response_id=response_id,
+            detections=analysis,
+            raw_response_json={},
+        )
+
+    db.add_all.assert_not_called()
+    db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_combined_concern_lookup_returns_both_detection_sources():
+    session_id = uuid.uuid4()
+    concern = SimpleNamespace(
+        concern_id="SC0001",
+        image_skin_concern_exists=True,
+        questionnaire_skin_concern_exists=True,
+        skin_concern_exists=True,
+        if_skin_concern_true_why="Image: Visible dryness. Questionnaire: Dryness reported.",
+    )
+    result = Mock()
+    result.all.return_value = [(concern, "Dry Skin")]
+    db = Mock(execute=AsyncMock(return_value=result))
+
+    combined = await get_combined_skin_concerns(db, session_id=session_id)
+
+    assert combined is not None
+    assert combined[0].model_dump() == {
+        "skin_concern_id": "SC0001",
+        "skin_concern_name": "Dry Skin",
+        "image_skin_concern_exists": True,
+        "questionnaire_skin_concern_exists": True,
+        "skin_concern_exists": True,
+        "if_skin_concern_true_why": (
+            "Image: Visible dryness. Questionnaire: Dryness reported."
+        ),
+    }
+
+
+@pytest.mark.asyncio
+async def test_combined_concern_lookup_returns_none_before_merge():
+    result = Mock()
+    result.all.return_value = []
+    db = Mock(execute=AsyncMock(return_value=result))
+
+    assert await get_combined_skin_concerns(
+        db,
+        session_id=uuid.uuid4(),
+    ) is None

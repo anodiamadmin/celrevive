@@ -20,9 +20,25 @@ class FakeResult:
         return self.session_id
 
 
+class FakeCatalogResult:
+    def __init__(self, concern_ids):
+        self.concern_ids = concern_ids
+
+    def scalars(self):
+        return self
+
+    def all(self):
+        return self.concern_ids
+
+
 class FakeDatabase:
-    def __init__(self, session_id):
+    def __init__(self, session_id, image_concern_ids=None):
         self.session_id = session_id
+        self.image_concern_ids = (
+            set(image_concern_ids)
+            if image_concern_ids is not None
+            else SUPPORTED_IMAGE_CONCERNS
+        )
         self.executed = []
         self.rows = []
         self.commit_count = 0
@@ -30,6 +46,8 @@ class FakeDatabase:
 
     async def execute(self, statement):
         self.executed.append(statement)
+        if "skin_concern.detectable_by_selfie" in str(statement):
+            return FakeCatalogResult(self.image_concern_ids)
         if "SELECT" in str(statement).upper():
             return FakeResult(self.session_id)
         self.rows.clear()
@@ -91,7 +109,7 @@ async def test_store_persists_all_28_rows_with_image_reference():
 
     assert len(db.rows) == 28
     assert db.commit_count == 2
-    assert len(db.executed) == 4
+    assert len(db.executed) == 6
 
 
 @pytest.mark.asyncio
@@ -107,6 +125,27 @@ async def test_store_rejects_image_from_another_session():
             raw_response_json={},
         )
 
+    assert db.commit_count == 0
+
+
+@pytest.mark.asyncio
+async def test_store_rejects_concern_not_enabled_for_image_detection():
+    session_id = uuid.uuid4()
+    db = FakeDatabase(
+        session_id,
+        image_concern_ids=SUPPORTED_IMAGE_CONCERNS - {"SC0001"},
+    )
+
+    with pytest.raises(ValueError, match="not enabled for image detection"):
+        await store_visual_ai_detections(
+            db,
+            session_id=session_id,
+            image_id=uuid.uuid4(),
+            detections=detections(),
+            raw_response_json={},
+        )
+
+    assert db.rows == []
     assert db.commit_count == 0
 
 

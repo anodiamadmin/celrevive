@@ -43,6 +43,8 @@ RESTRICTED OUTPUT — SUPPORTED CONCERN IDS ONLY
   and ONLY those IDs (SC0001-SC0019 and SC1001-SC1009, as provided in the
   template). Do not add, remove, rename, reorder, or invent any concern or ID
   that is not already present in the input template.
+- SC2001-SC2004 are questionnaire-only concerns; never return them from image
+  analysis, even if they seem visually plausible.
 - Return exactly the same number of entries as the input template, each with
   the same skin_concern_id and skin_concern_name unchanged.
 

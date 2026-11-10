@@ -167,6 +167,26 @@ def test_questionnaire_ai_rejects_concern_without_direct_support(
     ),
 )
 @patch("app.services.questionnaire_ai.client.genai.Client")
+def test_questionnaire_ai_rejects_image_only_concern_id(mock_client, _settings):
+    payload = model_payload()
+    payload["questionnaire_skin_concerns"][-1]["skin_concern_id"] = "SC1001"
+    mock_client.return_value.models.generate_content.return_value.text = json.dumps(payload)
+
+    with pytest.raises(
+        QuestionnaireMalformedResponseError,
+        match="each questionnaire concern exactly once",
+    ):
+        call_questionnaire_ai(completed_questionnaire())
+
+
+@patch(
+    "app.services.questionnaire_ai.client.get_settings",
+    return_value=SimpleNamespace(
+        GEMINI_API_KEY="test-key",
+        QUESTIONNAIRE_AI_MODEL="test-model",
+    ),
+)
+@patch("app.services.questionnaire_ai.client.genai.Client")
 def test_questionnaire_ai_rejects_profile_contradicting_answers(mock_client, _settings):
     payload = model_payload()
     payload["skin_type"] = "oily"
