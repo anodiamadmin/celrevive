@@ -3,7 +3,7 @@
 client_id = "0d67212bcd1d4df08f3e07ff2fd9890f"
 name = "CelRevive AI Skin Assessment"
 application_url = "https://nosogenetic-gaynelle-tonnishly.ngrok-free.dev/"
-embedded = true
+embedded = false
 
 [build]
 automatically_update_urls_on_dev = true

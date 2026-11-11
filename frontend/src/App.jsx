@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import LandingIntro from './features/landing/LandingIntro';
 import CapturePhoto from './features/camera/CapturePhoto';
+import Questionnaire from './features/questionnaire/Questionnaire';
 import RecommendationPage from './features/recommendation/RecommendationPage';
 import { useSessionStore } from './store/useSessionStore.js';
 
@@ -12,13 +13,13 @@ function App() {
 
   useEffect(() => {
     const widgetRoot = document.getElementById('ai-skin-assessment');
-    
+
     if (widgetRoot) {
-      const { customerFirstName, customerId } = widgetRoot.dataset;
-      
+      const { customerFirstName, customerName, customerId } = widgetRoot.dataset;
+
       setShopifyUser({
-        firstName: customerFirstName || null,
-        customerId: customerId || null
+        firstName: customerFirstName || customerName || null,
+        customerId: customerId || null,
       });
     }
   }, []);
@@ -32,6 +33,14 @@ function App() {
       {currentStep === 'camera' && (
         <CapturePhoto
           onSubmit={() => {
+            setStep('questionnaire');
+          }}
+        />
+      )}
+
+      {currentStep === 'questionnaire' && (
+        <Questionnaire
+          onComplete={() => {
             setStep('recommendation');
           }}
         />
