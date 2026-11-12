@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +29,7 @@ from app.services.questionnaire_ai.client import (
     validate_questionnaire_payload,
 )
 from app.workers.recommendation_task import run_questionnaire_analysis
+from app.services.shopify_order_service import create_and_complete_zero_cost_order
 
 router = APIRouter()
 
@@ -273,3 +274,53 @@ async def get_session_recommendation(
         status_code=status.HTTP_409_CONFLICT,
         detail="Recommendation is not available yet.",
     )
+
+@router.post(
+    "/sessions/{session_id}/place-order",
+    status_code=status.HTTP_200_OK,
+)
+async def place_session_order(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    try:
+        session_result = await db.execute(
+            select(CustomerSession).where(CustomerSession.session_id == session_id)
+        )
+        session = session_result.scalar_one_or_none()
+        if session is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Customer session not found.",
+            )
+
+        rec_response = await get_session_recommendation(
+            session_id=session_id,
+            db=db,
+        )
+        rec_data = (
+            rec_response.model_dump()
+            if hasattr(rec_response, "model_dump")
+            else dict(rec_response)
+        )
+
+        return await create_and_complete_zero_cost_order(
+            session_id=str(session_id),
+            shopify_customer_id=getattr(session, "shopify_customer_id", None),
+            shopify_customer_email=getattr(session, "shopify_customer_email", None),
+            shopify_customer_name=getattr(session, "shopify_customer_name", None),
+            skin_type=rec_data.get("skin_type"),
+            skin_concerns=rec_data.get("skin_concerns") or [],
+            recommended_base=rec_data.get("recommended_base") or {},
+            formulation_weight_g=rec_data.get("formulation_weight_g"),
+            recommended_actives=rec_data.get("recommended_actives") or [],
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        import logging
+        logging.getLogger("uvicorn.error").exception("place_session_order failed")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"place_session_order error: {type(exc).__name__}: {str(exc)}",
+        )

@@ -233,3 +233,27 @@ export const pollImageAnalysis = async (sessionId, attempts = 0) => {
     return pollImageAnalysis(sessionId, attempts + 1);
   }
 };
+
+/**
+ * 5. Places a zero-cost ($0.00) custom formulation order in Shopify Admin.
+ */
+export const placeOrder = async (sessionId) => {
+  const res = await fetchWithTimeout(
+    `${API_BASE_URL}/sessions/${sessionId}/place-order`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const msg = await extractApiErrorMessage(res, 'Failed to place order');
+    throw new Error(msg);
+  }
+
+  return res.json();
+};

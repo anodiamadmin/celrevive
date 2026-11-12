@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import uuid
 from typing import Optional
@@ -19,6 +20,7 @@ from app.repositories.admin_repository import (
     get_session_questionnaire_answers,
     get_session_recommendation_detail,
 )
+from app.services.shopify_order_service import exchange_session_token_for_offline_token
 from app.services.storage_service import read_image_bytes
 
 router = APIRouter(tags=["admin-dashboard"])
@@ -27,6 +29,7 @@ TEMPLATES_DIR = Path(__file__).resolve().parents[3] / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
+@router.get("/", response_class=HTMLResponse, include_in_schema=False)
 @router.get("/admin", response_class=HTMLResponse)
 async def render_admin_dashboard(
     request: Request,
@@ -41,6 +44,14 @@ async def render_admin_dashboard(
     ),
     db: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
+    # Only exchange Shopify's id_token if SHOPIFY_ADMIN_ACCESS_TOKEN is not already set
+    id_token = request.query_params.get("id_token")
+    shop = request.query_params.get(
+        "shop", os.getenv("SHOPIFY_STORE_DOMAIN", "46a312.myshopify.com")
+    )
+    if id_token and not os.getenv("SHOPIFY_ADMIN_ACCESS_TOKEN", "").strip():
+        await exchange_session_token_for_offline_token(shop, id_token)
+
     recent_sessions = await get_recent_sessions_summary(db, limit=30)
 
     target_uuid: Optional[uuid.UUID] = None
