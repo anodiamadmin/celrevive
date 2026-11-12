@@ -6,10 +6,11 @@ import httpx
 from dotenv import load_dotenv, set_key
 from fastapi import HTTPException, status
 
-# Explicitly load .env from the backend root directory
+# Load .env only if it exists on disk (local dev), without overriding cloud env vars
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE_PATH = BACKEND_ROOT / ".env"
-load_dotenv(ENV_FILE_PATH, override=True)
+if ENV_FILE_PATH.exists():
+    load_dotenv(ENV_FILE_PATH, override=False)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -19,10 +20,11 @@ async def exchange_session_token_for_offline_token(
 ) -> Optional[str]:
     """
     Exchanges Shopify's embedded Admin session JWT (id_token) via RFC 8693
-    for a permanent offline Admin API access token (shpat_...) and persists
-    it to the backend .env file.
+    for a permanent offline Admin API access token (shpat_...).
     """
-    load_dotenv(ENV_FILE_PATH, override=True)
+    if ENV_FILE_PATH.exists():
+        load_dotenv(ENV_FILE_PATH, override=False)
+
     client_id = os.getenv("SHOPIFY_CLIENT_ID", "").strip()
     client_secret = (
         os.getenv("SHOPIFY_API_SECRET", "").strip()
@@ -68,14 +70,20 @@ async def exchange_session_token_for_offline_token(
         access_token = res.json().get("access_token")
         if access_token:
             os.environ["SHOPIFY_ADMIN_ACCESS_TOKEN"] = access_token
-            set_key(
-                str(ENV_FILE_PATH),
-                "SHOPIFY_ADMIN_ACCESS_TOKEN",
-                access_token,
-            )
-            logger.info(
-                "Saved permanent SHOPIFY_ADMIN_ACCESS_TOKEN to %s", ENV_FILE_PATH
-            )
+            # Only write to disk in local development when .env already exists
+            if ENV_FILE_PATH.exists():
+                set_key(
+                    str(ENV_FILE_PATH),
+                    "SHOPIFY_ADMIN_ACCESS_TOKEN",
+                    access_token,
+                )
+                logger.info(
+                    "Saved permanent SHOPIFY_ADMIN_ACCESS_TOKEN to %s", ENV_FILE_PATH
+                )
+            else:
+                logger.info(
+                    "Captured SHOPIFY_ADMIN_ACCESS_TOKEN into process memory."
+                )
             return access_token
     except Exception:
         logger.exception("Error during Shopify token exchange")
@@ -84,59 +92,23 @@ async def exchange_session_token_for_offline_token(
 
 
 async def _get_shopify_admin_token(shop_domain: str) -> str:
-    load_dotenv(ENV_FILE_PATH, override=True)
+    if ENV_FILE_PATH.exists():
+        load_dotenv(ENV_FILE_PATH, override=False)
 
     static_token = os.getenv("SHOPIFY_ADMIN_ACCESS_TOKEN", "").strip()
     if static_token:
         return static_token
 
     msg = (
-        "SHOPIFY_ADMIN_ACCESS_TOKEN is not in .env yet. "
-        "Open 'CelRevive AI Skin Assessment' inside Shopify Admin -> Apps once "
-        "so the backend can automatically capture and save the offline token to .env."
+        "SHOPIFY_ADMIN_ACCESS_TOKEN is not configured. "
+        "Add it to Render Environment Variables or open 'CelRevive AI Skin Assessment' "
+        "inside Shopify Admin -> Apps once."
     )
     logger.error(msg)
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=msg,
     )
-
-    token_url = f"https://{shop_domain}/admin/oauth/access_token"
-    logger.info("Requesting Shopify Admin token from %s for client_id=%s...", token_url, client_id[:6])
-
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        res = await client.post(
-            token_url,
-            data={
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "grant_type": "client_credentials",
-            },
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json",
-            },
-        )
-
-    if res.status_code != 200:
-        msg = f"Shopify token exchange failed (HTTP {res.status_code}): {res.text}"
-        logger.error(msg)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=msg,
-        )
-
-    data = res.json()
-    access_token = data.get("access_token")
-    if not access_token:
-        msg = f"Shopify token response missing access_token: {data}"
-        logger.error(msg)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=msg,
-        )
-
-    return access_token
 
 
 async def create_and_complete_zero_cost_order(
@@ -152,7 +124,9 @@ async def create_and_complete_zero_cost_order(
     recommended_actives: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
     try:
-        load_dotenv(BACKEND_ROOT / ".env", override=True)
+        if ENV_FILE_PATH.exists():
+            load_dotenv(ENV_FILE_PATH, override=False)
+
         shop_domain = (
             os.getenv("SHOPIFY_STORE_DOMAIN", "46a312.myshopify.com")
             .replace("https://", "")

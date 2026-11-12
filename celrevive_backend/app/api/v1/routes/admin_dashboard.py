@@ -44,13 +44,12 @@ async def render_admin_dashboard(
     ),
     db: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    # Automatically exchange Shopify's id_token for a permanent offline shpat_ token
-    # and persist it to .env whenever the app is opened inside Shopify Admin
+    # Only exchange Shopify's id_token if SHOPIFY_ADMIN_ACCESS_TOKEN is not already set
     id_token = request.query_params.get("id_token")
     shop = request.query_params.get(
         "shop", os.getenv("SHOPIFY_STORE_DOMAIN", "46a312.myshopify.com")
     )
-    if id_token:
+    if id_token and not os.getenv("SHOPIFY_ADMIN_ACCESS_TOKEN", "").strip():
         await exchange_session_token_for_offline_token(shop, id_token)
 
     recent_sessions = await get_recent_sessions_summary(db, limit=30)

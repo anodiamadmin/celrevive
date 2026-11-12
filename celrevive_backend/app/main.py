@@ -1,22 +1,6 @@
-# import logging
-# from fastapi import FastAPI
-#
-# from app.api.v1.routes.image_analysis import router as image_router
-#
-# logging.basicConfig(level=logging.INFO)
-#
-# app = FastAPI(title="CelRevive AI Skin Assessment", version="0.1.0")
-#
-# app.include_router(image_router, prefix="/api/v1", tags=["image-analysis"])
-#
-# @app.get("/health")
-# def health_check() -> dict:
-#     return {"status": "ok"}
-
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
 
 from app.api.v1.routes.admin_dashboard import router as admin_dashboard_router
 from app.api.v1.routes.image import router as image_router
@@ -40,11 +24,6 @@ app.add_middleware(
 app.include_router(image_router, prefix="/api/v1", tags=["image-analysis"])
 app.include_router(sessions_router, prefix="/api/v1", tags=["sessions"])
 app.include_router(admin_dashboard_router)
-
-
-@app.get("/", include_in_schema=False)
-def root_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/admin")
 
 
 @app.get("/health")
