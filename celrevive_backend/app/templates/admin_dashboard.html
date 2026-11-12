@@ -700,11 +700,30 @@
         </div>
 
         <!-- Scan Metadata Details -->
+        <!-- Scan Metadata Details -->
         <div class="flex-1 w-full space-y-3">
           <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/80">
-            <div class="text-[11px] text-stone-500">Customer</div>
+            <div class="text-[11px] text-stone-500">Customer Name</div>
             <div class="text-sm font-semibold text-stone-900 mt-0.5 truncate">
-              {{ active_customer_label }}
+              {% if selected_session.shopify_customer_name %}
+                {{ selected_session.shopify_customer_name }}
+              {% else %}
+                Customer
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/80">
+            <div class="text-[11px] text-stone-500">Customer Email</div>
+            <div class="text-sm font-semibold text-stone-900 mt-0.5 truncate">
+              {{ selected_session.shopify_customer_email or 'Guest / Unlinked' }}
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/80">
+            <div class="text-[11px] text-stone-500">Shopify Customer ID</div>
+            <div class="text-sm font-semibold text-stone-900 mt-0.5 truncate font-mono text-xs">
+              {{ selected_session.shopify_customer_id or 'Guest (No ID)' }}
             </div>
           </div>
 

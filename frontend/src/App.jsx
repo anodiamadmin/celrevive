@@ -15,11 +15,12 @@ function App() {
     const widgetRoot = document.getElementById('ai-skin-assessment');
 
     if (widgetRoot) {
-      const { customerFirstName, customerName, customerId } = widgetRoot.dataset;
+      const { customerFirstName, customerName, customerId, customerEmail } = widgetRoot.dataset;
 
       setShopifyUser({
         firstName: customerFirstName || customerName || null,
         customerId: customerId || null,
+        email: customerEmail || null,
       });
     }
   }, []);
