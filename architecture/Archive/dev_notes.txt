@@ -610,3 +610,11 @@ json schema for questionnaire payload
     }
   }
 }
+
+
+
+IMP LOG:
+Currently we only have compatibility information for Oil Base.
+For current purposes, all other base-active compatibilities are being kept as true with a note of  "not-verified".
+When accurate compatibility information for all base-actives are received, the compatibility boolean should be changed according and notes be changed to "verified"
+For oil specifically , Im treating the X's as false and blank cells as true, as per Top15ActiveDatabase.Comatibility, and marking as verified in notes. 

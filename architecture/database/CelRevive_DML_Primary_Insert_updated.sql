@@ -1198,23 +1198,40 @@ ON CONFLICT (active_id, doc_id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
 -- 11. base_active_compatibility
--- Retained from supplied Compatibility sheet load. Absence of a row means
--- 'not assessed', not 'incompatible'. No active-vs-active incompatibility rows
--- were supplied in the source DML.
+-- Oil pairs reflect the supplied compatibility matrix (X means incompatible)
+-- and are marked verified. Other base pairs use provisional defaults.
 -- ---------------------------------------------------------------------------
-INSERT INTO base_active_compatibility (base_id, active_id, is_compatible) VALUES
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Agefinity™'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'AmelioSense™'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Dermabiotics HDB1196 GN'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'ENDOTHELYOL®'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'ETERWELL™ YOUTH'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Ectoin® natural'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Glycoin® natural'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'NovoRetin™'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'SYN®-COLL CB'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Skinmimics® PRO MB'), TRUE),
-    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'TRI-SOLVE®'), TRUE)
-ON CONFLICT (base_id, active_id) DO NOTHING;
+INSERT INTO base_active_compatibility (base_id, active_id, is_compatible, note) VALUES
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Ectoin® natural'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Skinmimics® PRO MB'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Dermabiotics HDB1196 GN'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Defensil® Plus'), TRUE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'AmelioSense™'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Agefinity™'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'ETERWELL™ YOUTH'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'SYN®-COLL CB'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'ILUMYS®'), TRUE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'ENDOTHELYOL®'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Sytenol® A'), TRUE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'NovoRetin™'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'TRI-SOLVE®'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Glycoin® natural'), FALSE, 'verified'),
+    ((SELECT base_id FROM base WHERE base_name = 'Oil'), (SELECT active_id FROM active WHERE active_name = 'Vetivyne™'), TRUE, 'verified')
+ON CONFLICT (base_id, active_id) DO UPDATE
+SET is_compatible = EXCLUDED.is_compatible,
+    note = EXCLUDED.note;
+
+-- Provisional defaults for non-Oil pairs without client-confirmed data.
+-- Update is_compatible and note when the client provides verified mappings.
+INSERT INTO base_active_compatibility (base_id, active_id, is_compatible, note)
+SELECT b.base_id, a.active_id, TRUE, 'not-verified'
+FROM base AS b
+CROSS JOIN active AS a
+WHERE b.base_name <> 'Oil'
+ON CONFLICT (base_id, active_id) DO UPDATE
+SET is_compatible = EXCLUDED.is_compatible,
+    note = EXCLUDED.note
+WHERE base_active_compatibility.note IS DISTINCT FROM 'verified';
 
 -- ---------------------------------------------------------------------------
 -- 12. Pre-commit integrity checks
