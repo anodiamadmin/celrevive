@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Loader2, RefreshCcw } from 'lucide-react';
-import { pollRecommendation } from '../../api';
+import { Sparkles, Loader2, RefreshCcw, Check } from 'lucide-react';
+import { pollRecommendation, placeOrder } from '../../api';
 import { useSessionStore } from '../../store/useSessionStore';
 
 const SKIN_TYPE_LABELS = {
@@ -13,8 +13,6 @@ const SKIN_TYPE_LABELS = {
   unknown: 'Normal Skin',
 };
 
-// Guarantees visible bolding even when Shopify's custom body font lacks a 700 weight file
-// and #ai-skin-assessment has font-synthesis: none in index.css
 const BOLD_LABEL_STYLE = {
   fontWeight: 700,
   fontSynthesis: 'weight',
@@ -32,10 +30,6 @@ function escapeRegExp(str = '') {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/**
- * Removes repetitive base or active ingredient names from the AI explanation
- * so the description reads cleanly like the wireframe (e.g. "Chosen for...").
- */
 function stripIngredientName(explanation = '', itemName = '') {
   if (!explanation) return '';
   let text = explanation.trim();
@@ -74,6 +68,10 @@ export default function RecommendationPage({ shopifyUser }) {
   const [result, setResult] = useState(null);
   const [isPolling, setIsPolling] = useState(true);
   const [error, setError] = useState(null);
+
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState(null);
+  const [orderError, setOrderError] = useState('');
 
   useEffect(() => {
     if (!sessionId) {
@@ -166,39 +164,18 @@ export default function RecommendationPage({ shopifyUser }) {
     ? ` (${data.formulation_weight_g}g)`
     : '';
 
-  const handleAddToCart = async () => {
-    const root = document.getElementById('ai-skin-assessment');
-    const variantId = root?.dataset?.formulationVariantId;
-    if (!variantId) return;
+  const handlePlaceOrder = async () => {
+    if (!sessionId || isPlacingOrder || placedOrder) return;
+    setIsPlacingOrder(true);
+    setOrderError('');
 
     try {
-      await fetch('/cart/add.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: Number(variantId),
-          quantity: 1,
-          properties: {
-            'Recommendation ID': data.recommendation_id || '',
-            Base: recommendedBase
-              ? `${recommendedBase.base_name}${weightSuffix}`
-              : '',
-            Actives: recommendedActives
-              .map(
-                (a) =>
-                  `${a.active_name}${
-                    a.recommended_usage_percentage != null
-                      ? ` (${a.recommended_usage_percentage}%)`
-                      : ''
-                  }`
-              )
-              .join(', '),
-          },
-        }),
-      });
-      window.location.href = '/cart';
-    } catch {
-      // Do nothing if cart endpoint is not configured
+      const orderData = await placeOrder(sessionId);
+      setPlacedOrder(orderData);
+    } catch (err) {
+      setOrderError(err.message || 'Unable to place order right now. Please try again.');
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
@@ -355,22 +332,46 @@ export default function RecommendationPage({ shopifyUser }) {
             </div>
           )}
 
-          {/* Primary CTA: Add to Cart Button (Solid Black Rectangular) */}
-          <div className="mt-[32px] flex justify-center">
+          {/* Primary CTA: Place Order Button */}
+          <div className="mt-[32px] flex flex-col items-center">
             <button
               type="button"
-              onClick={handleAddToCart}
+              onClick={handlePlaceOrder}
+              disabled={isPlacingOrder || Boolean(placedOrder)}
               style={{
-                backgroundColor: '#08060d',
+                backgroundColor: placedOrder ? '#1f6f61' : '#08060d',
                 color: '#ffffff',
                 fontWeight: 600,
                 fontSynthesis: 'weight',
               }}
-              className="flex items-center justify-center gap-2 rounded-none px-[32px] py-[12px] text-[14px] tracking-wide transition-opacity hover:opacity-90"
+              className="flex items-center justify-center gap-2 rounded-none px-[32px] py-[12px] text-[14px] tracking-wide transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-90"
             >
-              <span>Add to Cart</span>
-              <span aria-hidden="true">→</span>
+              {isPlacingOrder ? (
+                <>
+                  <Loader2 className="h-[16px] w-[16px] animate-spin" />
+                  <span>Placing Order...</span>
+                </>
+              ) : placedOrder ? (
+                <>
+                  <Check className="h-[16px] w-[16px]" />
+                  <span>
+                    Order Placed{' '}
+                    {placedOrder.order_name ? `(${placedOrder.order_name})` : ''}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span>Place Order</span>
+                  <span aria-hidden="true">→</span>
+                </>
+              )}
             </button>
+
+            {orderError && (
+              <p className="mt-[10px] text-center text-[13px] font-medium text-red-600">
+                {orderError}
+              </p>
+            )}
           </div>
         </div>
       </div>
