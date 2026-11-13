@@ -2,7 +2,7 @@
 
 client_id = "0d67212bcd1d4df08f3e07ff2fd9890f"
 name = "CelRevive AI Skin Assessment"
-application_url = "https://nosogenetic-gaynelle-tonnishly.ngrok-free.dev/"
+application_url = "https://celrevive-backend.onrender.com/"
 embedded = true
 
 [build]
@@ -20,7 +20,7 @@ use_legacy_install_flow = false
 redirect_urls = [ ]
 
 [app_proxy]
-url = "https://nosogenetic-gaynelle-tonnishly.ngrok-free.dev/"
+url = "https://celrevive-backend.onrender.com/"
 subpath = "celrevive-backend"
 prefix = "apps"
 
