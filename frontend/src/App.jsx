@@ -4,6 +4,7 @@ import CapturePhoto from './features/camera/CapturePhoto';
 import Questionnaire from './features/questionnaire/Questionnaire';
 import RecommendationPage from './features/recommendation/RecommendationPage';
 import { useSessionStore } from './store/useSessionStore.js';
+import { warmUpServer } from './api';
 
 function App() {
   const currentStep = useSessionStore((state) => state.currentStep);
@@ -12,10 +13,14 @@ function App() {
   const [shopifyUser, setShopifyUser] = useState(null);
 
   useEffect(() => {
+    // Immediately send a silent wake-up ping to the backend on page load
+    warmUpServer();
+
     const widgetRoot = document.getElementById('ai-skin-assessment');
 
     if (widgetRoot) {
-      const { customerFirstName, customerName, customerId, customerEmail } = widgetRoot.dataset;
+      const { customerFirstName, customerName, customerId, customerEmail } =
+        widgetRoot.dataset;
 
       setShopifyUser({
         firstName: customerFirstName || customerName || null,
