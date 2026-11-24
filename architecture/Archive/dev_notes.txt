@@ -617,4 +617,265 @@ IMP LOG:
 Currently we only have compatibility information for Oil Base.
 For current purposes, all other base-active compatibilities are being kept as true with a note of  "not-verified".
 When accurate compatibility information for all base-actives are received, the compatibility boolean should be changed according and notes be changed to "verified"
-For oil specifically , Im treating the X's as false and blank cells as true, as per Top15ActiveDatabase.Comatibility, and marking as verified in notes. 
+For oil specifically , Im treating the X's as false and blank cells as true, as per Top15ActiveDatabase.Comatibility, and marking as verified in notes.
+
+Complete workflow for active + base selection:
+
+Search tools
+Completed with input: {
+  "query": "semantic code search, symbol lookup, and call graph tools to trace image intake service actives bases and final recommendation formula"
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\services\\image_intake_service.py"
+}
+
+Search for `active|base|formula|recommendation|ingredient`
+
+semantic_search
+Completed with input: {
+  "query": "Explain how active ingredients and bases are selected and how final recommendation formula is constructed. Search image intake and recommendation service flow, ranking/scoring, ingredient extraction, constraints, and output formula."
+}
+
+Search for `def |active|base|formula|recommendation|score|selection|select`
+
+Search for `run_visual_ai_analysis|run_recommendation|FormulationRecommendation|validate_...`
+
+Search for `active|base|formula|recommendation|score|selection`
+
+Read , lines 514 to 773
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\repositories\\recommendation_repository.py",
+  "view_range": [
+    514,
+    773
+  ]
+}
+
+Read , lines 185 to 503
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\repositories\\recommendation_repository.py",
+  "view_range": [
+    185,
+    503
+  ]
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\workers\\recommendation_task.py"
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\services\\formulation_ai\\system_prompt.py"
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\services\\formulation_ai\\client.py"
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\schemas\\formulation.py"
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\services\\visual_ai\\system_prompt.py"
+}
+
+Search for `class Base|class Active|class BaseActiveCompatibility|usage_level_min|price_t...`
+
+Search for `CREATE.*VIEW|relevance_score_0_100|mapping_evidence_floor|mapped_benefit_count`
+
+Search for `vw_active_concern_score|vw_current_concern_benefit|vw_current_active_benefit_...`
+
+Read , lines 935 to 1043
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\architecture\\database\\CelRevive_DDL_updated.sql",
+  "view_range": [
+    935,
+    1043
+  ]
+}
+
+Read , lines 478 to 582
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\architecture\\database\\CelRevive_DDL.sql",
+  "view_range": [
+    478,
+    582
+  ]
+}
+
+Read , lines 1 to 60
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\services\\questionnaire_ai\\client.py",
+  "view_range": [
+    1,
+    60
+  ]
+}
+
+Read , lines 20 to 72
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\models\\recommendation.py",
+  "view_range": [
+    20,
+    72
+  ]
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\tests\\unit\\test_formulation_validation.py"
+}
+
+Search for `questionnaire.*skin.concern|skin_type|texture|primary goal|q1|allerg|medicati...`
+
+Read , lines 200 to 355
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\services\\questionnaire_ai\\client.py",
+  "view_range": [
+    200,
+    355
+  ]
+}
+
+Read , lines 1 to 35
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\repositories\\recommendation_repository.py",
+  "view_range": [
+    1,
+    35
+  ]
+}
+
+Read , lines 1 to 75
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\services\\questionnaire_ai\\system_prompt.py",
+  "view_range": [
+    1,
+    75
+  ]
+}
+
+Search for `recommended_usage_percentage|formulation_weight_g|recommended_base|recommende...`
+
+Search for `formulation_weight|usage_level_min|usage percentage|weighted_score_0_20|relev...`
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\tests\\unit\\test_recommendation_output.py"
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\schemas\\recommendation.py"
+}
+
+Read , lines 115 to 160
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\services\\shopify_order_service.py",
+  "view_range": [
+    115,
+    160
+  ]
+}
+
+Read , lines 310 to 340
+Completed with input: {
+  "path": "C:\\celriv_deployment\\celrevive\\celrevive_backend\\app\\api\\v1\\routes\\sessions.py",
+  "view_range": [
+    310,
+    340
+  ]
+}
+
+## What the tagged file does—and doesn’t do
+
+`image_intake_service.py` handles image intake, not formulation selection. It checks that the session exists, saves the uploaded image, records it in the database, and schedules visual analysis in the background. The scheduling happens at the end of the function (`line 76`).
+
+The base and active selection happen later, in the recommendation workflow.
+
+## 1. The workflow gathers and combines detected concerns
+
+The recommendation task waits until the needed image and questionnaire detections are ready, then combines them and retrieves formulation candidates (`recommendation_task.py`).
+
+For each concern, the merge logic treats it as present if **either** the image analysis or questionnaire analysis marked it present. Its confidence is the highest confidence among the positive detections. The associated explanations are combined. See `merge_concern_detections`.
+
+The system then limits recommendation inputs to at most **five positive concerns**. It sorts them by confidence, highest first, and breaks ties by concern ID. This is a cap on which concerns go into formulation—not a ranking of ingredients. See `select_recommendation_concerns`.
+
+## 2. How active-to-concern relevance is calculated
+
+The backend builds candidate information from the selected concerns and the database: concern-to-benefit mappings, active-to-benefit scores, active-to-concern relevance scores, bases, actives, and compatible base–active pairs (`get_formulation_candidate_information`).
+
+The active-to-concern score is derived in the database, rather than taken from a direct active-to-concern mapping. For each concern and active:
+
+1. The system uses the latest mapping version for that concern and the latest score version for each active/benefit pair.
+2. Each concern-to-benefit mapping has a weight; each active-to-benefit score contributes to that benefit.
+3. Missing active-to-benefit scores count as zero. Their mapping weights are **not** removed from the denominator.
+4. It calculates a weighted average, then scales that score to a 0–100 relevance score:
+
+   `weighted_score = Σ(mapping_weight × active_benefit_score) / Σ(mapping_weight)`
+
+   `relevance_score_0_100 = 5 × weighted_score`  
+   (rounded in the view).
+
+The SQL implementing this is `vw_active_concern_score`. The candidate query supplies those scores to the formulation model; the backend does not itself pick the highest-scoring active for each concern.
+
+## 3. How the AI chooses actives
+
+The formulation model receives the candidate data plus the customer’s questionnaire answers and combined concerns. Its instructions say to:
+
+- choose actives only from the supplied active catalog;
+- choose only actives marked compatible with the selected base;
+- select only actives with a positive relevance score for at least one detected concern;
+- consider the questionnaire’s skin type, texture preference, primary goal, and stated preferences when choosing a base; and
+- provide explanations grounded in the supplied information.
+
+Those instructions are in the `formulation system prompt`. The model call uses structured JSON output and a low temperature, but the selection is still an AI decision—not a deterministic “pick the top score” algorithm (`formulation_ai/client.py`).
+
+The backend then validates the model’s choices before saving them. Each selected active must:
+
+- be a catalog candidate;
+- have a non-null minimum usage level;
+- be compatible with the chosen base;
+- have a positive relevance score for at least one selected concern; and
+- be unique in the list.
+
+Additionally, the selected actives, **as a group**, must cover every concern passed into the recommendation. That means each selected concern needs at least one selected active with a positive score for it. If there are no selected concerns, the active list must be empty. See `validate_recommendation_selection`.
+
+So the score is used as a **relevance gate and coverage check**, not as a strict ordering rule or a guarantee that the highest-scoring active is selected.
+
+## 4. How the base is chosen
+
+The candidate list includes base catalog entries and their available attributes, such as name, price tier, age range, skin type, moisture, and description. The model is instructed to consider questionnaire preferences when choosing one base. It must return exactly one base ID from that list.
+
+There is no code here that filters bases down to only those matching the customer’s skin type, age, or price tier, nor a formula that scores and ranks bases. Those attributes are information for the model to consider. The hard validation is that the chosen base must be in the supplied catalog. See the candidate query in `recommendation_repository.py` and the `base-selection instructions`.
+
+The compatibility list is then used to constrain which actives can accompany that base.
+
+## 5. What the “final formula” contains
+
+The saved recommendation contains one selected base and an ordered list of selected actives. The active order is the order returned by the model; it is saved as recommendation ranks 1, 2, and so on. The model provides the reasons, but **not** the usage percentages.
+
+For each chosen active, the output takes `recommended_usage_percentage` from that active’s **catalog `usage_level_min`**. The catalog also has a maximum usage level, but this output path does not choose or calculate a percentage between the minimum and maximum. The response schema describes the percentage as defaulting to the catalog minimum (`recommendation.py`); the assignment happens in `build_recommendation_output`.
+
+The batch weight is determined by the selected base’s name:
+
+- `Oil` or `Serum` → **50 g**
+- any other name → **100 g**
+
+The name is trimmed and compared case-insensitively. This is implemented at `line 693`.
+
+In shorthand, the output is therefore:
+
+> **Selected base + each selected active at that active’s catalog minimum usage percentage; batch weight = 50 g for Oil/Serum, otherwise 100 g.**
+
+One important limitation: the backend does **not** turn those percentages into gram amounts, calculate the remaining base quantity, check that the combined percentages sum to a particular total, or otherwise produce a fully mass-balanced manufacturing recipe. For illustration only, if a 50 g batch uses an active at 1% by weight, that would correspond to 0.5 g—but the code returns `1.0%`, not `0.5 g`. The final output construction is visible in `build_recommendation_output`.
+
+The recommendation also includes explanations and a safety notice. The prompt directs the model not to make medical claims or claim allergy safety; if allergies, medication, or professional treatment are reported, it asks for a notice to review suitability with a qualified professional (`formulation system prompt`).
