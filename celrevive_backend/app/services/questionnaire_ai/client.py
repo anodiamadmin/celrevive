@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from google import genai
 from google.genai import types
 from pydantic import ValidationError
 
@@ -13,6 +12,7 @@ from app.schemas.questionnaire import (
     SensitivityLevel,
     SkinType,
 )
+from app.services.genai_cascade import generate_with_cascade, resolve_model_cascade
 from app.services.genai_schema import genai_response_schema
 from app.services.questionnaire_ai.system_prompt import QUESTIONNAIRE_AI_SYSTEM_PROMPT
 
@@ -275,46 +275,55 @@ def _directly_supported_concern_ids(response_json: dict[str, Any]) -> set[str]:
     return concern_ids
 
 
-def call_questionnaire_ai(response_json: dict[str, Any]) -> tuple[dict[str, Any], QuestionnaireAnalysis]:
+def call_questionnaire_ai(
+    response_json: dict[str, Any],
+) -> tuple[dict[str, Any], QuestionnaireAnalysis]:
     response_json = validate_questionnaire_payload(response_json)
     template = _read_json(DETECTION_TEMPLATE_PATH)
     settings = get_settings()
-    if not settings.GEMINI_API_KEY:
-        raise QuestionnaireAIError("GEMINI_API_KEY is not configured")
 
-    try:
-        response = genai.Client(api_key=settings.GEMINI_API_KEY).models.generate_content(
-            model=settings.QUESTIONNAIRE_AI_MODEL,
-            contents=[
-                types.Content(
-                    role="user",
-                    parts=[
-                        types.Part.from_text(
-                            text=(
-                                "Extract concerns from this submitted questionnaire. "
-                                "Return every concern in the template:\n\n"
-                                + json.dumps(
-                                    {
-                                        "questionnaire_user_answer": response_json,
-                                        "questionnaire_detection_template": template,
-                                    },
-                                    ensure_ascii=False,
-                                )
-                            )
+    models = resolve_model_cascade(
+        settings,
+        primary_attr="QUESTIONNAIRE_AI_MODEL",
+        fallback_attr="QUESTIONNAIRE_AI_FALLBACK_MODELS",
+        error_cls=QuestionnaireAIError,
+    )
+
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(
+                    text=(
+                        "Extract concerns from this submitted questionnaire. "
+                        "Return every concern in the template:\n\n"
+                        + json.dumps(
+                            {
+                                "questionnaire_user_answer": response_json,
+                                "questionnaire_detection_template": template,
+                            },
+                            ensure_ascii=False,
                         )
-                    ],
+                    )
                 )
             ],
-            config=types.GenerateContentConfig(
-                system_instruction=QUESTIONNAIRE_AI_SYSTEM_PROMPT,
-                response_mime_type="application/json",
-                response_schema=genai_response_schema(QuestionnaireAnalysis),
-                temperature=0.1,
-            ),
         )
-    except Exception as exc:
-        logger.exception("Questionnaire AI API call failed")
-        raise QuestionnaireAIError(str(exc)) from exc
+    ]
+    config = types.GenerateContentConfig(
+        system_instruction=QUESTIONNAIRE_AI_SYSTEM_PROMPT,
+        response_mime_type="application/json",
+        response_schema=genai_response_schema(QuestionnaireAnalysis),
+        temperature=0.1,
+    )
+
+    response = generate_with_cascade(
+        stage_name="Questionnaire",
+        api_key=settings.GEMINI_API_KEY,
+        models=models,
+        contents=contents,
+        config=config,
+        error_cls=QuestionnaireAIError,
+    )
 
     try:
         raw = json.loads(response.text)

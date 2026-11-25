@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Loader2, RefreshCcw, Check } from 'lucide-react';
+import {
+  Sparkles,
+  Loader2,
+  RefreshCcw,
+  Check,
+  ExternalLink,
+} from 'lucide-react';
 import { pollRecommendation, placeOrder } from '../../api';
 import { useSessionStore } from '../../store/useSessionStore';
+import Modal from '../../components/Modal';
 
 const CUSTOM_FORMULA_VARIANT_ID = 68105686417728;
 
@@ -26,6 +33,13 @@ const NORMAL_TEXT_STYLE = {
   fontWeight: 400,
   WebkitTextStroke: '0px',
   color: '#4b5563',
+};
+
+const SECTION_HEADING_STYLE = {
+  color: '#1f6f61',
+  fontWeight: 700,
+  fontSynthesis: 'weight',
+  WebkitTextStroke: '0.2px #1f6f61',
 };
 
 function getOrderStorageKey(sessionId) {
@@ -54,8 +68,11 @@ function stripIngredientName(explanation = '', itemName = '') {
   if (leadingVerbRegex.test(text)) {
     text = text.replace(leadingVerbRegex, '');
   } else {
-    const anywhereRegex = new RegExp(`\\b${namePattern}\\b\\s*`, 'gi');
-    text = text.replace(anywhereRegex, '');
+    const anywhereRegex = new RegExp(
+      `(^|[^A-Za-z0-9_])${namePattern}(?=$|[^A-Za-z0-9_])\\s*`,
+      'gi'
+    );
+    text = text.replace(anywhereRegex, '$1');
   }
 
   text = text
@@ -67,6 +84,44 @@ function stripIngredientName(explanation = '', itemName = '') {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function getFallbackConfidenceLabel(score) {
+  if (typeof score !== 'number' || Number.isNaN(score) || score < 0.5) {
+    return null;
+  }
+  if (score < 0.6) return 'Possible Match';
+  if (score < 0.7) return 'Moderate Match';
+  if (score < 0.8) return 'Notable Match';
+  if (score < 0.9) return 'Strong Match';
+  return 'Very Strong Match';
+}
+
+function getConfidenceBadge(concern) {
+  const backendLabel =
+    typeof concern?.confidence_label === 'string'
+      ? concern.confidence_label.trim()
+      : '';
+  if (backendLabel) {
+    return backendLabel;
+  }
+  return getFallbackConfidenceLabel(concern?.confidence_score);
+}
+
+function getDetectionSourceBadge(concern) {
+  const backendSource =
+    typeof concern?.detection_source === 'string'
+      ? concern.detection_source.trim()
+      : '';
+  if (backendSource) {
+    return backendSource.replace(/\s*\+\s*/g, ' + ');
+  }
+  const hasImage = Boolean(concern?.image_skin_concern_exists);
+  const hasQuestionnaire = Boolean(concern?.questionnaire_skin_concern_exists);
+  if (hasImage && hasQuestionnaire) return 'IMAGE + QUESTIONNAIRE';
+  if (hasImage) return 'IMAGE';
+  if (hasQuestionnaire) return 'QUESTIONNAIRE';
+  return null;
+}
+
 export default function RecommendationPage({ shopifyUser }) {
   const sessionId = useSessionStore((state) => state.sessionId);
   const clearSession = useSessionStore((state) => state.clearSession);
@@ -74,6 +129,9 @@ export default function RecommendationPage({ shopifyUser }) {
   const [result, setResult] = useState(null);
   const [isPolling, setIsPolling] = useState(true);
   const [error, setError] = useState(null);
+
+  const [isDetailedReportOpen, setIsDetailedReportOpen] = useState(false);
+  const [selectedIngredient, setSelectedIngredient] = useState(null);
 
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [cartAdded, setCartAdded] = useState(false);
@@ -99,7 +157,6 @@ export default function RecommendationPage({ shopifyUser }) {
       return;
     }
 
-    // Restore placedOrder state if sessionId changed or page refreshed
     try {
       const saved = localStorage.getItem(getOrderStorageKey(sessionId));
       if (saved) {
@@ -116,7 +173,6 @@ export default function RecommendationPage({ shopifyUser }) {
         const data = await pollRecommendation(sessionId);
         if (isMounted) {
           setResult(data);
-          // Also check if backend returned an order_placed flag/status
           if (
             data?.order_placed ||
             data?.status === 'ORDER_PLACED' ||
@@ -192,12 +248,21 @@ export default function RecommendationPage({ shopifyUser }) {
     firstName = data.user_full_name.trim().split(' ')[0];
   }
 
-  const rawConcernList = Array.isArray(data.skin_concerns)
-    ? data.skin_concerns.map((c) => c.skin_concern_name || c.concern_name || c)
+  const concernItems = Array.isArray(data.skin_concerns)
+    ? data.skin_concerns.filter((c) => c && c.skin_concern_exists !== false)
     : Array.isArray(data.primary_concerns)
-    ? data.primary_concerns.map((c) => c.concern_name || c)
+    ? data.primary_concerns
     : [];
-  const uniqueConcerns = [...new Set(rawConcernList.filter(Boolean))];
+
+  const uniqueConcerns = [
+    ...new Set(
+      concernItems
+        .map((c) =>
+          typeof c === 'string' ? c : c.skin_concern_name || c.concern_name
+        )
+        .filter(Boolean)
+    ),
+  ];
 
   const skinTypeLabel =
     SKIN_TYPE_LABELS[data.skin_type] || data.skin_type || 'Normal Skin';
@@ -206,9 +271,31 @@ export default function RecommendationPage({ shopifyUser }) {
   const recommendedActives = Array.isArray(data.recommended_actives)
     ? data.recommended_actives
     : [];
-  const weightSuffix = data.formulation_weight_g
-    ? ` (${data.formulation_weight_g}g)`
-    : '';
+  const formulaWeightG = data.formulation_weight_g || 100;
+
+  const openBaseModal = () => {
+    if (!recommendedBase) return;
+    setSelectedIngredient({
+      type: 'Base',
+      title: recommendedBase.base_name,
+      imageUrl: recommendedBase.image_url || null,
+      fullImage: true,
+      meta: null,
+      description: null,
+    });
+  };
+
+  const openActiveModal = (active) => {
+    if (!active) return;
+    setSelectedIngredient({
+      type: 'Active Ingredient',
+      title: active.active_name,
+      imageUrl: active.image_url || null,
+      fullImage: true,
+      meta: null,
+      description: null,
+    });
+  };
 
   const handleAddToCart = async () => {
     if (!sessionId || isAddingToCart || isPlacingOrder) return;
@@ -245,7 +332,7 @@ export default function RecommendationPage({ shopifyUser }) {
               id: CUSTOM_FORMULA_VARIANT_ID,
               quantity: 1,
               properties: {
-                'Base Formula': `${baseName} (${weightG}g)`,
+                'Base Formula': `${baseName} (${formulaWeightG}g)`,
                 'Active Ingredients': activesSummary,
                 'Skin Type': skinTypeLabel,
                 'Primary Concerns': concernsSummary,
@@ -354,15 +441,7 @@ export default function RecommendationPage({ shopifyUser }) {
       <div className="grid grid-cols-1 items-start gap-[28px] lg:grid-cols-12">
         {/* LEFT COLUMN: Skin Analysis Result */}
         <div className="rounded-xl border border-gray-200 bg-white p-[28px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] sm:p-[32px] lg:col-span-5">
-          <h2
-            className="m-0 mb-[28px] text-[20px]"
-            style={{
-              color: '#1f6f61',
-              fontWeight: 700,
-              fontSynthesis: 'weight',
-              WebkitTextStroke: '0.2px #1f6f61',
-            }}
-          >
+          <h2 className="m-0 mb-[28px] text-[20px]" style={SECTION_HEADING_STYLE}>
             Skin Analysis Result:
           </h2>
 
@@ -373,12 +452,34 @@ export default function RecommendationPage({ shopifyUser }) {
             </p>
 
             {uniqueConcerns.length > 0 ? (
-              <p className="m-0 text-[15px] leading-relaxed">
-                <span style={BOLD_LABEL_STYLE}>Primary Concerns: </span>
-                <span style={NORMAL_TEXT_STYLE}>
-                  {uniqueConcerns.join(', ')}.
-                </span>
-              </p>
+              <div>
+                <p className="m-0 text-[15px] leading-relaxed">
+                  <span style={BOLD_LABEL_STYLE}>Primary Concerns: </span>
+                  <span style={NORMAL_TEXT_STYLE}>
+                    {uniqueConcerns.join(', ')}.
+                  </span>
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDetailedReportOpen(true)}
+                  className="group relative mt-[18px] inline-flex items-center gap-[5px] border-0 bg-transparent p-0 text-[15px]"
+                  style={{ ...SECTION_HEADING_STYLE, cursor: 'pointer' }}
+                >
+                  <span className="relative inline-block">
+                    <span>View Detailed Report</span>
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute bottom-[-3px] left-0 h-[1.5px] w-full origin-center scale-x-0 bg-[#1f6f61] transition-transform duration-300 ease-out group-hover:scale-x-100"
+                    />
+                  </span>
+                  <ExternalLink
+                    className="h-[13px] w-[13px] shrink-0 text-[#1f6f61]"
+                    strokeWidth={2.25}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-gray-50 p-[20px] text-center">
                 <div className="mb-[8px] flex h-[40px] w-[40px] items-center justify-center rounded-full bg-teal-50 text-teal-700">
@@ -397,80 +498,110 @@ export default function RecommendationPage({ shopifyUser }) {
 
         {/* RIGHT COLUMN: Recommended For You */}
         <div className="rounded-xl border border-gray-200 bg-white p-[28px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] sm:p-[32px] lg:col-span-7">
-          <h2
-            className="m-0 mb-[24px] text-[20px]"
-            style={{
-              color: '#1f6f61',
-              fontWeight: 700,
-              fontSynthesis: 'weight',
-              WebkitTextStroke: '0.2px #1f6f61',
-            }}
-          >
-            Recommended For You:
+          <h2 className="m-0 mb-[24px] text-[20px]" style={SECTION_HEADING_STYLE}>
+            Recommended for You:
           </h2>
 
-          {/* Base Formula */}
-          {recommendedBase && (
-            <div className="mb-[24px]">
-              <h3 className="m-0 text-[16px]" style={BOLD_LABEL_STYLE}>
-                Base: {recommendedBase.base_name}
-                {weightSuffix}
-              </h3>
-              {recommendedBase.if_base_selected_why && (
-                <p
-                  className="mt-[6px] text-[13px] italic leading-relaxed"
-                  style={NORMAL_TEXT_STYLE}
-                >
-                  {stripIngredientName(
-                    recommendedBase.if_base_selected_why,
-                    recommendedBase.base_name
-                  )}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Active Ingredients */}
+          {/* CelRiv Custom Formula Group */}
           <div className="mb-[24px]">
-            <h3 className="m-0 mb-[12px] text-[15px]" style={BOLD_LABEL_STYLE}>
-              Active Ingredients:
+            <h3 className="m-0 mb-[16px] text-[17px]" style={BOLD_LABEL_STYLE}>
+              CelRiv Custom Formula ({formulaWeightG}g)
             </h3>
 
-            {recommendedActives.length > 0 ? (
-              <ul className="m-0 list-disc space-y-[10px] pl-[20px] text-[14px] leading-relaxed">
-                {recommendedActives.map((active) => {
-                  const pctText =
-                    active.recommended_usage_percentage != null
-                      ? ` (${active.recommended_usage_percentage}%)`
-                      : '';
-                  const cleanedWhy = stripIngredientName(
-                    active.if_active_selected_why,
-                    active.active_name
-                  );
-
-                  return (
-                    <li
-                      key={active.active_id || active.active_name}
-                      style={{ color: '#08060d' }}
+            <div className="space-y-[20px] border-l-2 border-gray-100 pl-[16px]">
+              {/* Sub-element 1: Base Formula */}
+              {recommendedBase && (
+                <div>
+                  <h4 className="m-0 text-[15px]" style={BOLD_LABEL_STYLE}>
+                    <span>Base: </span>
+                    <button
+                      type="button"
+                      onClick={openBaseModal}
+                      className="inline-flex items-center gap-[4px] border-0 border-b border-dotted border-[#08060d] bg-transparent p-0 pb-[1px] text-left transition-colors hover:border-[#1f6f61] hover:text-[#1f6f61]"
+                      style={{ ...BOLD_LABEL_STYLE, cursor: 'pointer' }}
+                      title={`View ${recommendedBase.base_name} details`}
                     >
-                      <span style={BOLD_LABEL_STYLE}>
-                        {active.active_name}
-                        {pctText}
-                      </span>
-                      {cleanedWhy ? (
-                        <span style={NORMAL_TEXT_STYLE}>{` – ${cleanedWhy}`}</span>
-                      ) : (
-                        ''
+                      <span>{recommendedBase.base_name}</span>
+                      <ExternalLink
+                        className="h-[13px] w-[13px] shrink-0 text-[#08060d]"
+                        strokeWidth={2.25}
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </h4>
+                  {recommendedBase.if_base_selected_why && (
+                    <p
+                      className="mt-[6px] text-[13px] italic leading-relaxed"
+                      style={NORMAL_TEXT_STYLE}
+                    >
+                      {stripIngredientName(
+                        recommendedBase.if_base_selected_why,
+                        recommendedBase.base_name
                       )}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-[14px]" style={NORMAL_TEXT_STYLE}>
-                No additional active ingredients required for your current skin profile.
-              </p>
-            )}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-element 2: Active Ingredients */}
+              <div>
+                <h4 className="m-0 mb-[10px] text-[15px]" style={BOLD_LABEL_STYLE}>
+                  Active Ingredients:
+                </h4>
+
+                {recommendedActives.length > 0 ? (
+                  <ul className="m-0 list-disc space-y-[10px] pl-[20px] text-[14px] leading-relaxed">
+                    {recommendedActives.map((active) => {
+                      const pctText =
+                        active.recommended_usage_percentage != null
+                          ? ` (${active.recommended_usage_percentage}%)`
+                          : '';
+                      const cleanedWhy = stripIngredientName(
+                        active.if_active_selected_why,
+                        active.active_name
+                      );
+
+                      return (
+                        <li
+                          key={active.active_id || active.active_name}
+                          style={{ color: '#08060d' }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openActiveModal(active)}
+                            className="inline items-center gap-[4px] border-0 border-b border-dotted border-[#08060d] bg-transparent p-0 pb-[1px] text-left transition-colors hover:border-[#1f6f61] hover:text-[#1f6f61]"
+                            style={{ ...BOLD_LABEL_STYLE, cursor: 'pointer' }}
+                            title={`View ${active.active_name} details`}
+                          >
+                            <span>
+                              {active.active_name}
+                              {pctText}
+                            </span>
+                            <ExternalLink
+                              className="ml-[3px] inline-block h-[12px] w-[12px] shrink-0 align-baseline text-[#08060d]"
+                              strokeWidth={2.25}
+                              aria-hidden="true"
+                            />
+                          </button>
+                          {cleanedWhy ? (
+                            <span style={NORMAL_TEXT_STYLE}>
+                              {` – ${cleanedWhy}`}
+                            </span>
+                          ) : (
+                            ''
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-[14px]" style={NORMAL_TEXT_STYLE}>
+                    No additional active ingredients required for your current skin
+                    profile.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Why this formula? */}
@@ -488,7 +619,6 @@ export default function RecommendationPage({ shopifyUser }) {
           {/* Dual CTA Row: Add to Cart (Left) + Place Order (Right) */}
           <div className="mt-[32px] flex flex-col items-center">
             <div className="flex w-full max-w-[520px] flex-col gap-[12px] sm:flex-row">
-              {/* Left Button: Add to Cart (Black border, fills black on hover) */}
               <button
                 type="button"
                 onClick={handleAddToCart}
@@ -532,7 +662,6 @@ export default function RecommendationPage({ shopifyUser }) {
                 )}
               </button>
 
-              {/* Right Button: Place Order (Solid black #08060d background, white text) */}
               <button
                 type="button"
                 onClick={handlePlaceOrder}
@@ -612,6 +741,87 @@ export default function RecommendationPage({ shopifyUser }) {
           <RefreshCcw className="h-[16px] w-[16px]" /> Take Another Assessment
         </button>
       </div>
+
+      {/* MODAL USAGE 1: Detailed Skin Concern Report */}
+      <Modal
+        isOpen={isDetailedReportOpen}
+        onClose={() => setIsDetailedReportOpen(false)}
+        title="Detailed Skin Analysis Report"
+        subtitle={`Skin Type: ${skinTypeLabel}`}
+        maxWidthClass="max-w-[600px]"
+      >
+        {concernItems.length > 0 ? (
+          <div className="space-y-[14px]">
+            {concernItems.map((concern, idx) => {
+              const name =
+                typeof concern === 'string'
+                  ? concern
+                  : concern.skin_concern_name || concern.concern_name;
+              const confidenceBadge =
+                typeof concern === 'string' ? null : getConfidenceBadge(concern);
+              const sourceBadge =
+                typeof concern === 'string'
+                  ? null
+                  : getDetectionSourceBadge(concern);
+              const whyText =
+                typeof concern === 'string'
+                  ? ''
+                  : concern.if_skin_concern_true_why || '';
+
+              return (
+                <div
+                  key={concern.skin_concern_id || name || idx}
+                  className="rounded-lg border border-gray-200 bg-gray-50/60 p-[16px]"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-[8px]">
+                    <span className="text-[15px]" style={BOLD_LABEL_STYLE}>
+                      {name}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-[6px]">
+                      {confidenceBadge && (
+                        <span className="rounded-full bg-[#1f6f61]/10 px-[10px] py-[2px] text-[11px] font-semibold text-[#1f6f61]">
+                          {confidenceBadge}
+                        </span>
+                      )}
+                      {sourceBadge && (
+                        <span className="rounded-full border border-gray-200 bg-white px-[10px] py-[2px] text-[11px] font-medium text-gray-700">
+                          {sourceBadge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {whyText && (
+                    <p
+                      className="m-0 mt-[8px] text-[13px] leading-relaxed"
+                      style={NORMAL_TEXT_STYLE}
+                    >
+                      {whyText}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="m-0 text-[14px]" style={NORMAL_TEXT_STYLE}>
+            No specific skin concerns were flagged in this session.
+          </p>
+        )}
+      </Modal>
+
+      {/* MODAL USAGE 2: Base / Active Ingredient Detail */}
+      <Modal
+        isOpen={Boolean(selectedIngredient)}
+        onClose={() => setSelectedIngredient(null)}
+        badge={selectedIngredient?.type}
+        title={selectedIngredient?.title}
+        imageUrl={selectedIngredient?.imageUrl}
+        imageAlt={selectedIngredient?.title}
+        fullImage={selectedIngredient?.fullImage}
+        meta={selectedIngredient?.meta}
+        description={selectedIngredient?.description}
+        maxWidthClass="max-w-[480px]"
+      />
     </div>
   );
 }

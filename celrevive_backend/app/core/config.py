@@ -24,9 +24,12 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/celrevive"
     SKIN_IMAGE_STORAGE_ROOT: str = "./data/skin_images"
-    VISUAL_AI_MODEL: str = "gemini-2.5-flash"
-    QUESTIONNAIRE_AI_MODEL: str = "gemini-2.5-flash"
-    FORMULATION_AI_MODEL: str = "gemini-2.5-flash"
+    VISUAL_AI_MODEL: str = "gemini-3.1-flash-lite"
+    VISUAL_AI_FALLBACK_MODELS: str = ""
+    QUESTIONNAIRE_AI_MODEL: str = "gemini-3.1-flash-lite"
+    QUESTIONNAIRE_AI_FALLBACK_MODELS: str = ""
+    FORMULATION_AI_MODEL: str = "gemini-3.1-flash-lite"
+    FORMULATION_AI_FALLBACK_MODELS: str = ""
     GEMINI_API_KEY: str | None = None
     SUPABASE_URL: str | None = None
     SUPABASE_SERVICE_ROLE_KEY: str | None = None
