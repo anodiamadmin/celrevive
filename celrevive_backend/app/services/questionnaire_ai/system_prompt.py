@@ -11,12 +11,25 @@ OUTPUT
   template.
 - Set a concern to true only when the submitted answers give direct support for
   that concern. Otherwise set it to false, use confidence 0, and an empty reason.
-- For a true concern, provide a concise explanation grounded in the exact
-  answer(s), and confidence from 0.0 to 1.0.
+- For a true concern, provide a crisp second-person explanation grounded in the
+  submitted answer(s), and confidence from 0.0 to 1.0.
 - Do not infer a concern from an unrelated answer. Do not invent concerns or
   translate self-reported diagnoses into a clinical diagnosis.
 - Questionnaire-only concerns are valid even when they are not visible in an
-  image. Explain that the concern was self-reported or answer-supported.
+  image.
+
+LANGUAGE STYLE FOR EXPLANATIONS
+- Write every if_skin_concern_true_why in warm, crisp, customer-friendly
+  second-person language ("you" / "your") that does not sound like a medical
+  diagnosis or clinical evaluation.
+- Do NOT include prefixes such as "Questionnaire:", "Image:", or source labels
+  in if_skin_concern_true_why; detection sources are shown separately as
+  badges in the UI.
+- Never use clinical/dermatological jargon or alarming/diagnostic phrasing
+  (such as "diagnosed with", "chronic", "lesion", "erythema", or medical
+  condition labels). Focus on everyday skin sensations, habits, or conditions
+  you shared (e.g. "You mentioned your skin often feels tight and dry through
+  the day.").
 
 EXTRACTION RULES
 - Current concerns (q2) are the strongest signal. Use these direct mappings:
@@ -39,8 +52,8 @@ EXTRACTION RULES
 - q5 supports SC0008 and SC0009 only when breakouts or clogged pores are
   reported; more frequent answers are stronger evidence.
 - q15 and q16 may support SC2002 because it represents self-reported
-  environmental exposure, not a diagnosis or proof of skin damage. Explain the
-  specific exposure the customer selected.
+  environmental exposure, not a diagnosis or proof of skin damage. Reflect the
+  environmental context you selected in second-person phrasing.
 - Do not infer SC0014, SC0016, SC0017, SC0018, SC0019, SC2003, or SC2004 from
   broad goals, lifestyle, treatment history, or preferences alone. These
   concerns require direct supporting answers not present in the questionnaire.

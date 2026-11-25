@@ -700,7 +700,6 @@
         </div>
 
         <!-- Scan Metadata Details -->
-        <!-- Scan Metadata Details -->
         <div class="flex-1 w-full space-y-3">
           <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/80">
             <div class="text-[11px] text-stone-500">Customer Name</div>
@@ -761,16 +760,21 @@
 </div>
 
   <script>
+    function parseIsoTimestamp(rawUtc) {
+      if (!rawUtc) return null;
+      const trimmed = rawUtc.trim();
+      const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(trimmed);
+      const normalizedIso = hasTimezone ? trimmed : `${trimmed}Z`;
+      const dateObj = new Date(normalizedIso);
+      return isNaN(dateObj.getTime()) ? null : dateObj;
+    }
+
     function formatAllTimestampsToUserLocalTime() {
       const elements = document.querySelectorAll('.local-timestamp');
       elements.forEach((el) => {
         const rawUtc = el.getAttribute('data-utc');
-        if (!rawUtc) return;
-
-        // Ensure ISO string is treated as UTC even if naive
-        const normalizedIso = rawUtc.endsWith('Z') || rawUtc.includes('+') ? rawUtc : `${rawUtc}Z`;
-        const dateObj = new Date(normalizedIso);
-        if (isNaN(dateObj.getTime())) return;
+        const dateObj = parseIsoTimestamp(rawUtc);
+        if (!dateObj) return;
 
         el.textContent = new Intl.DateTimeFormat(undefined, {
           month: 'short',

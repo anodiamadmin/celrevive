@@ -35,6 +35,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 ADMIN_COOKIE_NAME = "celrevive_admin_session"
 ADMIN_COOKIE_TTL_SECONDS = 12 * 60 * 60  # 12 hours
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
 def _get_signing_secret() -> str:
@@ -42,6 +43,48 @@ def _get_signing_secret() -> str:
         os.getenv("SHOPIFY_API_SECRET", "").strip()
         or os.getenv("SHOPIFY_CLIENT_SECRET", "").strip()
     )
+
+
+def _is_production_environment() -> bool:
+    if os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"):
+        return True
+
+    env_name = (
+        os.getenv("APP_ENV")
+        or os.getenv("ENVIRONMENT")
+        or os.getenv("ENV")
+        or ""
+    ).strip().lower()
+    return env_name in {"prod", "production"}
+
+
+def _is_safe_local_dev_request(request: Request) -> bool:
+    """
+    Allows direct local browser access only on loopback hosts when not running
+    in a production environment and not arriving over a production HTTPS proxy.
+    """
+    if _is_production_environment():
+        return False
+
+    hostname = (request.url.hostname or "").strip("[]").lower()
+    if hostname not in LOCAL_HOSTS:
+        return False
+
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").strip().lower()
+    if forwarded_proto == "https":
+        return False
+
+    return True
+
+
+def _is_authorized_admin_request(request: Request) -> tuple[bool, bool]:
+    """
+    Returns (is_authorized, is_valid_shopify_hmac).
+    """
+    is_valid_shopify_hmac = _verify_shopify_admin_hmac(request)
+    is_valid_cookie = _verify_signed_cookie(request)
+    is_local_dev = _is_safe_local_dev_request(request)
+    return (is_valid_shopify_hmac or is_valid_cookie or is_local_dev), is_valid_shopify_hmac
 
 
 def _verify_shopify_admin_hmac(request: Request) -> bool:
@@ -126,10 +169,9 @@ async def render_admin_dashboard(
     ),
     db: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    is_valid_shopify_hmac = _verify_shopify_admin_hmac(request)
-    is_valid_cookie = _verify_signed_cookie(request)
+    is_authorized, is_valid_shopify_hmac = _is_authorized_admin_request(request)
 
-    if not (is_valid_shopify_hmac or is_valid_cookie):
+    if not is_authorized:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Unauthorized: Please open this dashboard from Shopify Admin -> Apps.",
@@ -234,7 +276,8 @@ async def serve_session_image(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> Response:
-    if not (_verify_signed_cookie(request) or _verify_shopify_admin_hmac(request)):
+    is_authorized, _ = _is_authorized_admin_request(request)
+    if not is_authorized:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
 
     res = await db.execute(select(SkinImage).where(SkinImage.image_id == image_id))
