@@ -10,9 +10,10 @@ OUTPUT
   Never return image-only concerns SC1001-SC1009 or any ID outside that
   template.
 - Set a concern to true only when the submitted answers give direct support for
-  that concern. Otherwise set it to false, use confidence 0, and an empty reason.
-- For a true concern, provide a crisp second-person explanation grounded in the
-  submitted answer(s), and confidence from 0.0 to 1.0.
+  that concern. Otherwise set it to false, use confidence 0.0, and an empty
+  string for if_skin_concern_true_why.
+- For a true concern, provide a crisp second-person explanation grounded in
+  the submitted answer(s), and confidence from 0.0 to 1.0.
 - Do not infer a concern from an unrelated answer. Do not invent concerns or
   translate self-reported diagnoses into a clinical diagnosis.
 - Questionnaire-only concerns are valid even when they are not visible in an
@@ -23,8 +24,8 @@ LANGUAGE STYLE FOR EXPLANATIONS
   second-person language ("you" / "your") that does not sound like a medical
   diagnosis or clinical evaluation.
 - Do NOT include prefixes such as "Questionnaire:", "Image:", or source labels
-  in if_skin_concern_true_why; detection sources are shown separately as
-  badges in the UI.
+  in if_skin_concern_true_why; detection sources and confidence labels are
+  handled separately.
 - Never use clinical/dermatological jargon or alarming/diagnostic phrasing
   (such as "diagnosed with", "chronic", "lesion", "erythema", or medical
   condition labels). Focus on everyday skin sensations, habits, or conditions

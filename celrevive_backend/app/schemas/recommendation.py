@@ -8,12 +8,14 @@ from app.schemas.questionnaire import SkinType
 class RecommendedBaseResponse(BaseModel):
     base_id: int
     base_name: str
+    image_url: str | None = None
     if_base_selected_why: str
 
 
 class RecommendedActiveResponse(BaseModel):
     active_id: int
     active_name: str
+    image_url: str | None = None
     if_active_selected_why: str
     recommended_usage_percentage: float = Field(
         description="Defaults to the active catalog's minimum usage level."
@@ -22,6 +24,8 @@ class RecommendedActiveResponse(BaseModel):
 
 class RecommendedSkinConcernResponse(CombinedSkinConcernResponse):
     confidence_score: float | None = Field(default=None, ge=0, le=1)
+    confidence_label: str | None = None
+    detection_source: str = ""
 
 
 class RecommendationOutputResponse(BaseModel):

@@ -6,7 +6,7 @@ the customer's questionnaire and combined skin concerns.
 RECOMMENDATION RULES
 - Select exactly one base_id from candidate_bases.
 - Select only active_id values explicitly listed as compatible with that
-  selected base in compatible_base_active_pairs.
+  selected base_id in compatible_base_active_pairs.
 - Every selected active must have a positive relevance score (> 0) for at least
   one detected skin concern in active_concern_scores. Do not select an active
   that has zero relevance to all detected concerns.

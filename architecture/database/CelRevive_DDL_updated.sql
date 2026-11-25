@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS base (
     ph_min           NUMERIC(4,2),
     ph_max           NUMERIC(4,2),
     description      TEXT,
+    image_url        TEXT,
     CONSTRAINT uq_base_name UNIQUE (base_name),
     CONSTRAINT ck_base_age_min CHECK (age_min IS NULL OR age_min >= 0),
     CONSTRAINT ck_base_age_max CHECK (age_max IS NULL OR age_max >= 0),
@@ -148,6 +149,7 @@ CREATE TABLE IF NOT EXISTS active (
     usage_level_min    NUMERIC(8,4),
     usage_level_max    NUMERIC(8,4),
     description        TEXT,
+    image_url          TEXT,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_active_name UNIQUE (active_name),
@@ -165,6 +167,12 @@ CREATE TABLE IF NOT EXISTS active (
         OR usage_level_min <= usage_level_max
     )
 );
+
+ALTER TABLE IF EXISTS base
+    ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+ALTER TABLE IF EXISTS active
+    ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 -- ============================================================================
 -- 3. ACTIVE <-> BENEFIT SCORES

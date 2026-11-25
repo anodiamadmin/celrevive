@@ -60,8 +60,8 @@ LANGUAGE STYLE — SECOND-PERSON, CUSTOMER-FRIENDLY, NON-DIAGNOSTIC
   customer-friendly second-person language ("you" / "your") — never as a
   clinical chart or medical diagnosis.
 - Do NOT include prefixes such as "Image:", "Visual AI:", or "Questionnaire:"
-  in if_skin_concern_true_why; detection sources are displayed separately as
-  badges in the interface.
+  in if_skin_concern_true_why; detection sources and confidence labels are
+  handled separately.
 - Never use clinical, diagnostic, or dermatological jargon (e.g. avoid
   papules, pustules, comedones, erythema, hyperpigmentation, keratosis,
   telangiectasia, lesion, inflammatory, atrophy, sebaceous, follicular, or

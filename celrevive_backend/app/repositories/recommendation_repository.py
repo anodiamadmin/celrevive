@@ -23,6 +23,31 @@ from app.schemas.questionnaire import QuestionnaireAnalysis
 from app.services.questionnaire_ai.client import SKIN_TYPE_BY_ANSWER
 
 MAX_RECOMMENDATION_CONCERNS = 5
+MIN_RECOMMENDED_ACTIVES = 2
+
+
+def map_confidence_to_label(score: float | None) -> str | None:
+    if score is None or score < 0.5:
+        return None
+    if score < 0.6:
+        return "Possible Match"
+    if score < 0.7:
+        return "Moderate Match"
+    if score < 0.8:
+        return "Notable Match"
+    if score < 0.9:
+        return "Strong Match"
+    return "Very Strong Match"
+
+
+def format_detection_source(has_image: bool, has_questionnaire: bool) -> str:
+    if has_image and has_questionnaire:
+        return "IMAGE + QUESTIONNAIRE"
+    if has_image:
+        return "IMAGE"
+    if has_questionnaire:
+        return "QUESTIONNAIRE"
+    return ""
 
 
 async def store_questionnaire_detections(
@@ -215,10 +240,7 @@ def merge_concern_detections(
             if detection.confidence_score is not None:
                 concern["confidence_scores"].append(float(detection.confidence_score))
             if detection.if_skin_concern_true_why.strip():
-                label = "Image" if detection.detection_source == "IMAGE" else "Questionnaire"
-                concern["explanations"].append(
-                    f"{label}: {detection.if_skin_concern_true_why.strip()}"
-                )
+                concern["explanations"].append(detection.if_skin_concern_true_why.strip())
 
     concern_ids = set(by_concern)
     if set(concern_names) != concern_ids:
@@ -229,14 +251,17 @@ def merge_concern_detections(
         image_exists = item["image_skin_concern_exists"]
         questionnaire_exists = item["questionnaire_skin_concern_exists"]
         exists = image_exists or questionnaire_exists
+        confidence_score = max(item["confidence_scores"], default=0.0) if exists else 0.0
         combined_item = {
             "skin_concern_id": concern_id,
             "skin_concern_name": concern_names[concern_id],
             "image_skin_concern_exists": image_exists,
             "questionnaire_skin_concern_exists": questionnaire_exists,
             "skin_concern_exists": exists,
+            "detection_source": format_detection_source(image_exists, questionnaire_exists),
             "if_skin_concern_true_why": " ".join(item["explanations"]) if exists else "",
-            "confidence_score": max(item["confidence_scores"], default=0.0),
+            "confidence_score": confidence_score,
+            "confidence_label": map_confidence_to_label(confidence_score) if exists else None,
         }
         if combined_item["skin_concern_exists"] != (
             combined_item["image_skin_concern_exists"]
@@ -454,7 +479,7 @@ async def get_formulation_candidate_information(
         text(
             """
             SELECT base_id, base_name, price_tier, age_min, age_max, skin_type,
-                   moisture, description
+                   moisture, description, image_url
             FROM base
             ORDER BY base_id
             """
@@ -464,7 +489,7 @@ async def get_formulation_candidate_information(
         text(
             """
             SELECT active_id, active_name, usage_level_min, usage_level_max,
-                   description
+                   description, image_url
             FROM active
             ORDER BY active_id
             """
@@ -673,6 +698,7 @@ def build_recommendation_output(
             {
                 "active_id": active.active_id,
                 "active_name": catalog_active["active_name"],
+                "image_url": catalog_active.get("image_url"),
                 "if_active_selected_why": active.if_active_selected_why,
                 "recommended_usage_percentage": catalog_active["usage_level_min"],
             }
@@ -687,6 +713,7 @@ def build_recommendation_output(
         "recommended_base": {
             "base_id": recommendation.base_id,
             "base_name": base_name,
+            "image_url": selected_base.get("image_url"),
             "if_base_selected_why": recommendation.if_base_selected_why,
         },
         "recommended_actives": recommended_actives,
@@ -759,9 +786,13 @@ def validate_recommendation_selection(
         item["skin_concern_id"]
         for item in candidate_information["combined_skin_concerns"]
     }
-    covered_concern_ids = set().union(
-        *(set(scores_by_active.get(active_id, {})) for active_id in selected_active_ids)
-    ) if selected_active_ids else set()
+    covered_concern_ids = (
+        set().union(
+            *(set(scores_by_active.get(active_id, {})) for active_id in selected_active_ids)
+        )
+        if selected_active_ids
+        else set()
+    )
     if detected_concern_ids and not detected_concern_ids.issubset(covered_concern_ids):
         missing = sorted(detected_concern_ids - covered_concern_ids)
         raise ValueError(
@@ -770,6 +801,29 @@ def validate_recommendation_selection(
         )
     if not detected_concern_ids and selected_active_ids:
         raise ValueError("Formulation AI must not select actives when no concerns were detected")
+
+    # Enforce at least 2 distinct compatible, relevant actives when concerns exist and
+    # at least 2 compatible actives have positive relevance for the detected concerns.
+    if detected_concern_ids:
+        valid_compatible_relevant_actives = {
+            active_id
+            for active_id in active_candidates
+            if (recommendation.base_id, active_id) in compatible_pairs
+            and active_candidates_by_id[active_id]["usage_level_min"] is not None
+            and any(
+                concern_id in scores_by_active.get(active_id, {})
+                for concern_id in detected_concern_ids
+            )
+        }
+        if (
+            len(valid_compatible_relevant_actives) >= MIN_RECOMMENDED_ACTIVES
+            and len(selected_active_ids) < MIN_RECOMMENDED_ACTIVES
+        ):
+            raise ValueError(
+                f"Formulation AI must select at least {MIN_RECOMMENDED_ACTIVES} "
+                "compatible, relevant active ingredients"
+            )
+
     return scores_by_active
 
 
