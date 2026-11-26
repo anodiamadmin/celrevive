@@ -202,10 +202,13 @@ export default function Questionnaire({ onComplete }) {
             QUESTION {currentIndex + 1} OUT OF {TOTAL_QUESTIONS}
           </span>
         </div>
-        <div className="mx-auto mt-[8px] h-[6px] w-full max-w-[896px] overflow-hidden rounded-full bg-[var(--code-bg)]">
+        <div className="mx-auto mt-[8px] h-[6px] w-full max-w-[896px] overflow-hidden rounded-full bg-[#e5e7eb]">
           <div
-            className="h-full rounded-full bg-[var(--text-h)] transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
+            className="h-full rounded-full transition-all duration-300"
+            style={{
+              width: `${progressPercent}%`,
+              backgroundColor: '#000000',
+            }}
           />
         </div>
       </div>

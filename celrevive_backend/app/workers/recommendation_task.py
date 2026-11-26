@@ -61,6 +61,16 @@ async def run_questionnaire_analysis(
                 detections=analysis,
                 raw_response_json=raw,
             )
+            await db.execute(
+                update(CustomerSession)
+                .where(CustomerSession.session_id == session_id)
+                .values(
+                    session_status="QUESTIONNAIRE_COMPLETED",
+                    updated_at=text("CURRENT_TIMESTAMP"),
+                )
+            )
+            await db.commit()
+
             await complete_recommendation_if_ready(
                 db,
                 session_id=session_id,

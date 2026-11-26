@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import ImageWithSkeleton from './ImageWithSkeleton';
 
 const MODAL_TITLE_STYLE = {
   fontWeight: 700,
@@ -87,15 +88,14 @@ export default function Modal({
           </button>
         </div>
 
-        {imageUrl && (
-          fullImage ? (
-            <div className="w-full overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-              <img
-                src={imageUrl}
-                alt={imageAlt || title || 'Ingredient image'}
-                className="block h-auto w-full object-contain"
-              />
-            </div>
+        {imageUrl &&
+          (fullImage ? (
+            <ImageWithSkeleton
+              src={imageUrl}
+              alt={imageAlt || title || 'Ingredient image'}
+              containerClassName="w-full overflow-hidden rounded-lg border border-gray-100 bg-gray-50"
+              imgClassName="block h-auto w-full object-contain"
+            />
           ) : (
             <div className="mb-[16px] flex h-[190px] w-full items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-gray-50 p-[12px]">
               <img
@@ -104,16 +104,15 @@ export default function Modal({
                 className="h-full w-full object-contain"
               />
             </div>
-          )
-        )}
+          ))}
 
-        {meta && (
+        {!fullImage && meta && (
           <p className="m-0 mb-[10px] text-[13px]" style={MODAL_TITLE_STYLE}>
             {meta}
           </p>
         )}
 
-        {description && (
+        {!fullImage && description && (
           <p
             className="m-0 text-[14px] leading-relaxed"
             style={MODAL_BODY_STYLE}
